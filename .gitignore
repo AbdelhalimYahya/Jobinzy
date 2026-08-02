@@ -5,6 +5,9 @@
 node_modules/
 dist/
 
+# Store packaging output (Phase 13.1)
+release/
+
 # Secrets and env files
 .env
 .env.local

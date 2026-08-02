@@ -74,4 +74,5 @@ registration itself cannot be automated.
 - [ ] Short and long descriptions pasted above.
 - [ ] Icon set generated and attached.
 - [ ] Developer account + trader declaration complete.
-- [ ] Zip of `dist/` uploaded (see `npm run build` → `dist/`).
+- [ ] Zip of `dist/` uploaded (run `npm run package` — builds, then emits
+      `release/jobinzy.zip` with `manifest.json` at the zip root).

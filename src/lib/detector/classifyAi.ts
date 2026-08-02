@@ -7,6 +7,7 @@
  * on any failure it returns `{ kind: "unknown" }` so detection never breaks.
  */
 import { generate } from "../aiClient";
+import { debugWarn } from "../debug";
 import { extractJson } from "../json";
 import type { AiClassification, AISettings, FieldContext } from "../types";
 
@@ -40,7 +41,7 @@ export async function classifyByAi(
       questionText: obj.questionText,
     };
   } catch (err) {
-    console.warn("[Jobinzy] AI classification failed, marking unknown:", err);
+    debugWarn("[Jobinzy] AI classification failed, marking unknown:", err);
     return EMPTY_RESULT;
   }
 }

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { extractTextFromPdf, structureCv } from "../../lib/cvParser";
+import { debugWarn } from "../../lib/debug";
 import { getAISettings } from "../../lib/storage";
 import type { Profile } from "../../lib/types";
 
@@ -52,7 +53,7 @@ export function CvUploadStep({ onDone, onSkip }: Props) {
       setError(
         "Couldn't read that PDF. It may be image-only or corrupt — you can skip this step and add your CV text manually later."
       );
-      console.warn("[Jobinzy] PDF extraction failed:", err);
+      debugWarn("[Jobinzy] PDF extraction failed:", err);
       setStatus("idle");
     }
   }

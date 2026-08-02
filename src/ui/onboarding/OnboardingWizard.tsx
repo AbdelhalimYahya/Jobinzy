@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { debugWarn } from "../../lib/debug";
 import type { Profile } from "../../lib/types";
 import { getProfile, setMeta, setProfile } from "../../lib/storage";
 import { OnboardingForm } from "./OnboardingForm";
@@ -55,7 +56,7 @@ export function OnboardingWizard({ mode = "onboarding", onFinished }: Props) {
     setProfileState(next);
     // Persist after every step so interrupted onboarding resumes cleanly.
     void setProfile(next).catch((err) =>
-      console.warn("[Jobinzy] failed to persist onboarding step:", err)
+      debugWarn("[Jobinzy] failed to persist onboarding step:", err)
     );
   }
 

@@ -11,7 +11,8 @@
     "lint": "eslint src",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "package": "npm run build && node scripts/zip.mjs"
   },
   "dependencies": {
     "pdfjs-dist": "^4.10.38",

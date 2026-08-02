@@ -5,6 +5,7 @@
  */
 import * as pdfjsLib from "pdfjs-dist";
 import { generate, trimPrompt } from "./aiClient";
+import { debugWarn } from "./debug";
 import { extractJson } from "./json";
 import type { AISettings, Profile } from "./types";
 
@@ -70,7 +71,7 @@ export async function structureCv(
       skills: toStringArray(obj.skills),
     };
   } catch (err) {
-    console.warn("[Jobinzy] structureCv failed, falling back to empty arrays:", err);
+    debugWarn("[Jobinzy] structureCv failed, falling back to empty arrays:", err);
     return EMPTY_STRUCTURED;
   }
 }

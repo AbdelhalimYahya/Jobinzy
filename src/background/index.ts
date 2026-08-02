@@ -1,3 +1,4 @@
+import { debugLog } from "../lib/debug";
 import { getMeta, runMigrations } from "../lib/storage";
 // `?script` tells CRXJS to bundle this file as a standalone script and
 // return its built path — the ONLY way to dynamically inject TS content
@@ -12,7 +13,7 @@ import contentScriptPath from "../content/index.tsx?script";
  * page load — clicking either injects the detector content script (when
  * onboarding is complete) or opens the options page (onboarding).
  */
-console.log("[Jobinzy] background service worker started");
+debugLog("[Jobinzy] background service worker started");
 
 chrome.runtime.onInstalled.addListener(() => {
   void runMigrations();

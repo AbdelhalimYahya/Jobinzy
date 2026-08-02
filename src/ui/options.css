@@ -304,3 +304,51 @@ body {
   border-radius: 6px;
   color: var(--jf-muted);
 }
+
+/* Answer bank management view (Phase 7.5) */
+.jf-bank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jf-bank-item {
+  border: 1px solid var(--jf-border);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.jf-bank-text {
+  min-width: 0;
+}
+
+.jf-bank-question {
+  margin: 0 0 4px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.jf-bank-preview {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: #374151;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.jf-bank-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}

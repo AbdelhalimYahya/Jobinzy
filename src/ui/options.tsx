@@ -4,9 +4,16 @@ import { createRoot } from "react-dom/client";
 import { getMeta } from "../lib/storage";
 import { OnboardingWizard } from "./onboarding/OnboardingWizard";
 import { AISettingsForm } from "./settings/AISettingsForm";
+import { AnswerBankView } from "./bank/AnswerBankView";
 import "./options.css";
 
-type View = "loading" | "onboarding" | "home" | "edit-profile" | "ai-settings";
+type View =
+  | "loading"
+  | "onboarding"
+  | "home"
+  | "edit-profile"
+  | "ai-settings"
+  | "answer-bank";
 
 /**
  * Jobinzy options page — the single React UI surface.
@@ -56,6 +63,17 @@ function OptionsApp() {
     );
   }
 
+  if (view === "answer-bank") {
+    return (
+      <div className="jf-home">
+        <header className="jf-home-header">
+          <h1 className="jf-title">Saved answers</h1>
+        </header>
+        <AnswerBankView onBack={() => setView("home")} />
+      </div>
+    );
+  }
+
   return (
     <div className="jf-home">
       <header className="jf-home-header">
@@ -73,7 +91,9 @@ function OptionsApp() {
         <button className="jf-btn jf-btn-ghost" onClick={() => setView("ai-settings")}>
           AI settings
         </button>
-        {/* Answer Bank (Phase 7) mounts here. */}
+        <button className="jf-btn jf-btn-ghost" onClick={() => setView("answer-bank")}>
+          Saved answers
+        </button>
       </nav>
     </div>
   );

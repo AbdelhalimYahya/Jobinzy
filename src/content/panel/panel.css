@@ -1,12 +1,16 @@
-/* Jobinzy review panel (inside the shadow root — isolated from host page).
-   RTL-safe: uses fixed positioning and logical properties (inset-inline-*),
-   no left/right-only assumptions (plan 4.6). */
+/* Jobinzy review panel — Phase 8 full stylesheet (inside the shadow root,
+   isolated from the host page). RTL-safe: logical properties throughout
+   (inset-inline-*, text-align: start), no left/right-only assumptions (4.6). */
+
+* {
+  box-sizing: border-box;
+}
 
 .jbz-panel {
   position: fixed;
   top: 16px;
   inset-inline-end: 16px;
-  width: min(360px, calc(100vw - 32px));
+  width: min(380px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
@@ -18,16 +22,34 @@
   z-index: 2147483646;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 14px;
+  line-height: 1.45;
   overflow: hidden;
 }
 
+.jbz-panel.jbz-collapsed {
+  width: min(300px, calc(100vw - 32px));
+}
+
+/* Header doubles as the drag handle (8.6). */
 .jbz-panel-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 12px 14px;
   border-bottom: 1px solid #eef0f6;
   background: #fafbff;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.jbz-panel-header:active {
+  cursor: grabbing;
+}
+
+.jbz-header-title {
+  min-width: 0;
 }
 
 .jbz-panel-title {
@@ -36,13 +58,26 @@
   font-weight: 700;
 }
 
+.jbz-panel-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.jbz-header-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .jbz-close {
   border: none;
   background: transparent;
-  font-size: 16px;
+  font-size: 14px;
+  line-height: 1;
   cursor: pointer;
   color: #6b7280;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-radius: 6px;
 }
 
@@ -51,44 +86,59 @@
   color: #1f2430;
 }
 
-.jbz-close:focus-visible {
+.jbz-close:focus-visible,
+.jbz-btn:focus-visible,
+.jbz-file-link-input:focus-visible,
+.jbz-edit-textarea:focus-visible {
   outline: 2px solid #4f46e5;
   outline-offset: 1px;
 }
 
-.jbz-panel-sub {
-  margin: 0;
-  padding: 10px 16px;
-  font-size: 13px;
-  color: #6b7280;
-  border-bottom: 1px solid #eef0f6;
+.jbz-panel-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
 }
+
+/* ---- field list (8.1) ------------------------------------------------------ */
 
 .jbz-field-list {
   list-style: none;
   margin: 0;
-  padding: 8px;
-  overflow-y: auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .jbz-field-row {
+  border: 1px solid #eef0f6;
+  border-radius: 10px;
+  padding: 10px;
+  background: #ffffff;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 8px;
-  padding: 10px 8px;
-  border-radius: 8px;
 }
 
 .jbz-field-row:hover {
-  background: #f6f7fb;
+  border-color: #dfe3f0;
+}
+
+.jbz-field-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .jbz-field-q {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .jbz-badge {
@@ -97,25 +147,304 @@
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
-  text-transform: capitalize;
+  white-space: nowrap;
 }
 
-.jbz-badge-profile {
+.jbz-badge-auto-filled {
   background: #eef2ff;
   color: #4338ca;
 }
 
-.jbz-badge-open-ended {
+.jbz-badge-ai-generated {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.jbz-badge-from-bank {
   background: #ecfdf5;
   color: #047857;
 }
 
-.jbz-badge-file-or-link {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.jbz-badge-unknown {
+.jbz-badge-needs-input {
   background: #f3f4f6;
   color: #6b7280;
+}
+
+.jbz-badge-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.jbz-badge-mismatch {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.jbz-reused {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.jbz-confidence {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.jbz-confidence-ai {
+  color: #7e22ce;
+  background: #faf5ff;
+  border-color: #f3e8ff;
+}
+
+/* ---- answer display -------------------------------------------------------- */
+
+.jbz-field-answer {
+  font-size: 13px;
+  color: #374151;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.jbz-field-empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.jbz-mismatch {
+  color: #b45309;
+}
+
+.jbz-error-inline {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+/* ---- loading (8.8) --------------------------------------------------------- */
+
+.jbz-row-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  padding: 8px 10px;
+}
+
+.jbz-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #e0e7ff;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: jbz-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes jbz-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- error (6.7) ----------------------------------------------------------- */
+
+.jbz-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* ---- edit / rewrite (8.2, 7.4) --------------------------------------------- */
+
+.jbz-edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jbz-edit-textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  color: #1f2430;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+  background: #ffffff;
+}
+
+.jbz-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ---- row controls (8.2) ---------------------------------------------------- */
+
+.jbz-row-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.jbz-disposition,
+.jbz-row-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.jbz-btn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.jbz-btn:hover {
+  background: #f3f4f6;
+}
+
+.jbz-btn-small {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.jbz-btn-primary {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
+}
+
+.jbz-btn-primary:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+.jbz-btn-active {
+  background: #eef2ff;
+  border-color: #4f46e5;
+  color: #4338ca;
+}
+
+/* ---- file/link helper section (8.3) ---------------------------------------- */
+
+.jbz-file-section {
+  border: 1px dashed #e3e6ee;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fcfcff;
+}
+
+.jbz-file-heading {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.jbz-file-row {
+  padding: 8px 0;
+  border-top: 1px solid #eef0f6;
+}
+
+.jbz-file-row:first-of-type {
+  border-top: none;
+  padding-top: 2px;
+}
+
+.jbz-file-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.jbz-file-note {
+  margin: 6px 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.jbz-file-link-form {
+  display: flex;
+  gap: 6px;
+}
+
+.jbz-file-link-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 12px;
+  color: #1f2430;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+.jbz-file-used {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #047857;
+}
+
+/* ---- footer / fill (8.4) --------------------------------------------------- */
+
+.jbz-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 2px 6px;
+}
+
+.jbz-fill-btn {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.jbz-footer-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+/* Collapsed state (8.6): only the header bar shows; states are preserved in
+   React state so expanding restores everything. */
+.jbz-panel.jbz-collapsed .jbz-panel-body {
+  display: none;
 }

@@ -48,7 +48,7 @@ export function AnswerBankView({ onBack }: Props) {
     setEditAnswer(entry.answer);
   }
 
-  function editId(entry: AnswerBankEntry, index: number): string {
+  function editId(index: number): string {
     // Question text may contain spaces/punctuation — use the row index so
     // the id stays valid HTML for the label-for association.
     return `jf-bank-edit-${index}`;
@@ -80,12 +80,12 @@ export function AnswerBankView({ onBack }: Props) {
                 <div className="jf-field">
                   <label
                     className="jf-label"
-                    htmlFor={editId(entry, index)}
+                    htmlFor={editId(index)}
                   >
                     {entry.questionText}
                   </label>
                   <textarea
-                    id={editId(entry, index)}
+                    id={editId(index)}
                     className="jf-textarea"
                     rows={3}
                     value={editAnswer}

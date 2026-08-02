@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Application Form — (Microsoft Forms style) — Jobinzy Test Harness 11.2</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Segoe, Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 24px 16px;
+    }
+    .ms-card {
+      max-width: 560px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.15);
+      overflow: hidden;
+    }
+    .ms-header {
+      background: #004578;
+      color: #fff;
+      padding: 20px 24px;
+    }
+    .ms-header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+    .ms-body { padding: 20px 24px 28px; }
+    .ms-question { margin-bottom: 24px; }
+    .ms-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .ms-input {
+      width: 100%;
+      border: none;
+      border-bottom: 1px solid #999;
+      font-size: 14px;
+      padding: 6px 0;
+      background: transparent;
+      outline: none;
+    }
+    .ms-input:focus { border-bottom: 2px solid #004578; }
+    textarea.ms-input { resize: vertical; min-height: 80px; }
+    .ms-file {
+      border: 1px dashed #999;
+      padding: 14px;
+      font-size: 13px;
+      color: #444;
+      border-radius: 2px;
+    }
+    .ms-btn {
+      background: #004578;
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      padding: 10px 28px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="ms-card">
+    <div class="ms-header"><h1>Apply — Frontend Developer</h1></div>
+    <div class="ms-body">
+      <form>
+        <div class="ms-question">
+          <label class="ms-label" for="q-name">Full name *</label>
+          <input class="ms-input" id="q-name" name="f-name" type="text" required />
+        </div>
+        <div class="ms-question">
+          <label class="ms-label" for="q-email">Email *</label>
+          <input class="ms-input" id="q-email" name="f-email" type="email" required />
+        </div>
+        <div class="ms-question">
+          <label class="ms-label" for="q-phone">Phone</label>
+          <input class="ms-input" id="q-phone" name="f-phone" type="text" />
+        </div>
+        <div class="ms-question">
+          <label class="ms-label" for="q-id">National ID</label>
+          <input class="ms-input" id="q-id" name="f-nid" type="text" />
+        </div>
+        <div class="ms-question">
+          <label class="ms-label" for="q-links">Portfolio / GitHub / LinkedIn link</label>
+          <input class="ms-input" id="q-links" name="f-links" type="url" placeholder="https://…" />
+        </div>
+        <div class="ms-question">
+          <label class="ms-label" for="q-about">Tell us about your most recent project *</label>
+          <textarea class="ms-input" id="q-about" name="f-about" required></textarea>
+        </div>
+        <div class="ms-question">
+          <label class="ms-label" for="q-cv">Attach your CV</label>
+          <div class="ms-file"><input id="q-cv" name="f-cv" type="file" accept=".pdf" /></div>
+        </div>
+        <button type="submit" class="ms-btn">Submit</button>
+      </form>
+    </div>
+  </div>
+  <p style="text-align:center;color:#666;font-size:12px">Jobinzy test harness 11.2 — Microsoft Forms style.</p>
+</body>
+</html>

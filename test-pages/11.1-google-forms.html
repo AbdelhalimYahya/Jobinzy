@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Application — (Google Forms style) — Jobinzy Test Harness 11.1</title>
+  <style>
+    /* Mimics Google Forms' structure: .freebirdThemedCardPage / role=listitem rows. */
+    * { box-sizing: border-box; }
+    body {
+      font-family: Roboto, Arial, sans-serif;
+      background: #f0ebf8;
+      margin: 0;
+      padding: 32px 16px;
+    }
+    .form-card {
+      max-width: 640px;
+      margin: 0 auto 24px;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #dadce0;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+      overflow: hidden;
+    }
+    .form-header {
+      background: #673ab7;
+      color: #fff;
+      padding: 24px;
+    }
+    .form-header h1 { margin: 0 0 4px; font-size: 26px; }
+    .form-header p { margin: 0; font-size: 13px; opacity: .9; }
+    .form-body { padding: 24px; }
+    .question-block { margin-bottom: 28px; }
+    .question-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .req { color: #d93025; }
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-bottom: 1px solid #dadce0;
+      font-size: 14px;
+      background: transparent;
+      outline: none;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus { border-bottom: 2px solid #673ab7; }
+    textarea { resize: vertical; min-height: 90px; }
+    .radio-option { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+    .file-box {
+      border: 1px dashed #dadce0;
+      border-radius: 6px;
+      padding: 16px;
+      font-size: 13px;
+      color: #5f6368;
+    }
+    .submit-btn {
+      background: #673ab7;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 24px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-card">
+    <div class="form-header">
+      <h1>Senior Software Engineer Application</h1>
+      <p>Please complete this form to apply for the role.</p>
+    </div>
+    <div class="form-body">
+      <form>
+        <div class="question-block">
+          <div class="question-title">Full Name <span class="req">*</span></div>
+          <label for="full-name" style="position:absolute;left:-9999px">Full Name</label>
+          <input id="full-name" name="entry.fullName" type="text" required />
+        </div>
+
+        <div class="question-block">
+          <div class="question-title">Email Address <span class="req">*</span></div>
+          <label for="email" style="position:absolute;left:-9999px">Email Address</label>
+          <input id="email" name="entry.email" type="text" required />
+        </div>
+
+        <div class="question-block">
+          <div class="question-title">Phone Number</div>
+          <label for="phone" style="position:absolute;left:-9999px">Phone Number</label>
+          <input id="phone" name="entry.phone" type="text" />
+        </div>
+
+        <div class="question-block">
+          <div class="question-title">National ID <span class="req">*</span></div>
+          <label for="national-id" style="position:absolute;left:-9999px">National ID</label>
+          <input id="national-id" name="entry.nationalId" type="text" required />
+        </div>
+
+        <div class="question-block">
+          <div class="question-title">Why are you a good fit for this role? <span class="req">*</span></div>
+          <label for="why" style="position:absolute;left:-9999px">Why are you a good fit for this role?</label>
+          <textarea id="why" name="entry.why" required></textarea>
+        </div>
+
+        <div class="question-block">
+          <div class="question-title">Years of experience</div>
+          <label for="exp" style="position:absolute;left:-9999px">Years of experience</label>
+          <select id="exp" name="entry.experience">
+            <option value="">Select…</option>
+            <option value="0-1">0–1 year</option>
+            <option value="2-4">2–4 years</option>
+            <option value="5-8">5–8 years</option>
+            <option value="9+">9+ years</option>
+          </select>
+        </div>
+
+        <div class="question-block">
+          <div class="question-title">Do you have a valid work permit?</div>
+          <div class="radio-option"><input type="radio" id="perm-yes" name="permit" value="yes" /><label for="perm-yes">Yes</label></div>
+          <div class="radio-option"><input type="radio" id="perm-no" name="permit" value="no" /><label for="perm-no">No</label></div>
+        </div>
+
+        <div class="question-block">
+          <div class="question-title">Upload your CV <span class="req">*</span></div>
+          <div class="file-box">
+            <input id="cv" name="entry.cv" type="file" accept=".pdf" />
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn">Submit</button>
+      </form>
+    </div>
+  </div>
+  <p style="text-align:center;color:#5f6368;font-size:12px">
+    Jobinzy test harness 11.1 — Google Forms style. Fill via the panel, review, then submit (nothing is sent anywhere).
+  </p>
+</body>
+</html>

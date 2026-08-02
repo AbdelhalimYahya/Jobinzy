@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Async-rendered form — Jobinzy Test Harness 10.1</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #faf5ff; padding: 32px; }
+    .card { max-width: 500px; margin: 0 auto; background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    label { display: block; margin: 12px 0 4px; font-weight: 600; }
+    input, textarea { width: 100%; padding: 8px 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; }
+    textarea { min-height: 80px; }
+    h1 { font-size: 18px; }
+    #loader { color: #7c3aed; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Async-rendered application</h1>
+    <p id="loader">Loading form…</p>
+    <div id="form-slot" style="display:none"></div>
+  </div>
+
+  <script>
+    // 10.1: simulate a Google/MS-style form that renders well after page load.
+    // Click "Detect Form" IMMEDIATELY after load — the DOM-settle gate should
+    // still find all fields once they appear.
+    setTimeout(function () {
+      var slot = document.getElementById("form-slot");
+      slot.style.display = "block";
+      document.getElementById("loader").style.display = "none";
+      slot.innerHTML =
+        '<form>' +
+        '<label for="a-name">Full Name</label>' +
+        '<input id="a-name" name="name" type="text" />' +
+        '<label for="a-email">Email Address</label>' +
+        '<input id="a-email" name="email" type="email" />' +
+        '<label for="a-why">Why do you want this role?</label>' +
+        '<textarea id="a-why" name="why"></textarea>' +
+        '<label for="a-cv">Attach your CV</label>' +
+        '<input id="a-cv" name="cv" type="file" accept="application/pdf" />' +
+        '<button type="submit" style="margin-top:14px;padding:9px 20px">Submit</button>' +
+        '</form>';
+    }, 1200);
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>وظيفة: مهندس برمجيات — (Wuzzuf style) — Jobinzy Test Harness 11.3</title>
+  <style>
+    /* Arabic/RTL page (dir=rtl) — validates RTL-safe layout (4.6) + Arabic
+       keyword classification (5.3/5.5). */
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background: #f6f7f9;
+      margin: 0;
+      padding: 24px 16px;
+      color: #212529;
+    }
+    .wz-card {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .wz-header {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 18px 22px;
+    }
+    .wz-header h1 { margin: 0 0 4px; font-size: 20px; color: #0a2540; }
+    .wz-header p { margin: 0; font-size: 13px; color: #6b7280; }
+    .wz-body { padding: 20px 22px 26px; }
+    .wz-field { margin-bottom: 22px; }
+    .wz-label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #0a2540; }
+    .wz-label .req { color: #d64541; }
+    .wz-input {
+      width: 100%;
+      border: 1px solid #cfd6df;
+      border-radius: 4px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      background: #fff;
+    }
+    .wz-input:focus { border-color: #0a66c2; box-shadow: 0 0 0 2px rgba(10,102,194,.15); }
+    textarea.wz-input { resize: vertical; min-height: 96px; }
+    .wz-btn {
+      background: #0a66c2;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 11px 30px;
+      font-size: 15px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+  <div class="wz-card">
+    <div class="wz-header">
+      <h1>التقديم على وظيفة: مهندس برمجيات أول</h1>
+      <p>الرجاء تعبئة النموذج التالي للتقديم على الوظيفة.</p>
+    </div>
+    <div class="wz-body">
+      <form>
+        <div class="wz-field">
+          <label class="wz-label" for="w-name">الاسم بالكامل <span class="req">*</span></label>
+          <input class="wz-input" id="w-name" name="full_name" type="text" required />
+        </div>
+        <div class="wz-field">
+          <label class="wz-label" for="w-email">البريد الإلكتروني <span class="req">*</span></label>
+          <input class="wz-input" id="w-email" name="email" type="email" required />
+        </div>
+        <div class="wz-field">
+          <label class="wz-label" for="w-phone">رقم الهاتف <span class="req">*</span></label>
+          <input class="wz-input" id="w-phone" name="phone" type="text" required />
+        </div>
+        <div class="wz-field">
+          <label class="wz-label" for="w-nid">الرقم القومي <span class="req">*</span></label>
+          <input class="wz-input" id="w-nid" name="national_id" type="text" required />
+        </div>
+        <div class="wz-field">
+          <label class="wz-label" for="w-linkedin">رابط حسابك على لينكد إن</label>
+          <input class="wz-input" id="w-linkedin" name="linkedin_url" type="url" placeholder="https://linkedin.com/in/…" />
+        </div>
+        <div class="wz-field">
+          <label class="wz-label" for="w-why">لماذا تريد الانضمام إلى شركتنا؟ <span class="req">*</span></label>
+          <textarea class="wz-input" id="w-why" name="cover_message" required></textarea>
+        </div>
+        <div class="wz-field">
+          <label class="wz-label" for="w-cv">أرفق سيرتك الذاتية (CV)</label>
+          <input class="wz-input" id="w-cv" name="cv_file" type="file" accept=".pdf" />
+        </div>
+        <button type="submit" class="wz-btn">إرسال الطلب</button>
+      </form>
+    </div>
+  </div>
+  <p style="text-align:center;color:#6b7280;font-size:12px">
+    Jobinzy test harness 11.3 — Wuzzuf style, Arabic labels, RTL page.
+  </p>
+</body>
+</html>

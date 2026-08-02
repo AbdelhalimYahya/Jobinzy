@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Form inside an iframe — Jobinzy Test Harness 10.2</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f5f5f4; padding: 24px; }
+    .card { max-width: 620px; margin: 0 auto; background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    iframe { width: 100%; height: 340px; border: 1px solid #d6d3d1; border-radius: 8px; margin-top: 12px; background: #fff; }
+    h1 { font-size: 17px; }
+    .note { font-size: 13px; color: #44403c; background: #fef9c3; border: 1px solid #fde047; border-radius: 6px; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Embedded application form</h1>
+    <p class="note">
+      Phase 10.2: this page has a form inside a <b>same-origin iframe</b> (about:blank
+      document created inline), plus a second iframe whose content is loaded from a
+      different origin below. Run detection — the same-origin fields must be detected;
+      the cross-origin iframe should surface the "can't read embedded form" notice.
+    </p>
+
+    <form id="outer-form">
+      <label for="outer-name" style="font-weight:600">Your name (outer page)</label>
+      <input id="outer-name" name="name" type="text" style="width:100%;padding:8px" />
+    </form>
+
+    <iframe id="inner-frame" title="inner form frame" srcdoc="
+      <!DOCTYPE html>
+      <html><body style='font-family:system-ui,sans-serif'>
+        <h3 style='font-size:14px'>Inner same-origin form</h3>
+        <label>Full Name</label>
+        <input name='inner_name' type='text' style='width:100%;padding:6px;margin:4px 0' />
+        <label>Why are you a good fit for this role?</label>
+        <textarea name='inner_why' rows='3' style='width:100%;padding:6px'></textarea>
+      </body></html>
+    "></iframe>
+
+    <!-- Cross-origin frame: an actual external origin (won't be readable). -->
+    <iframe id="external-frame" title="external frame" src="https://example.com"></iframe>
+  </div>
+</body>
+</html>

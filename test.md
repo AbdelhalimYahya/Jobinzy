@@ -194,17 +194,37 @@ without errors in the console.
 
 ### Phase 11 — Manual testing pass
 
-- **11.1** Full run-through on a real Google Form: onboarding already done
-  → detect → review panel accuracy → fill → submit-readiness (don't
-  actually submit someone's real application unless it's a test form).
-- **11.2** Same full run-through on a real Microsoft Forms form.
-- **11.3** Same full run-through on a real Wuzzuf application. Note any
-  fields it misclassified and confirm a keyword-list fix resolves them.
-- **11.4** Full run-through on a form outside all three platforms — confirm
-  reasonable behavior with no platform-specific assumptions failing.
-- **11.5** Across two separate detect sessions on two different forms
-  containing the same recurring question, confirm reuse-then-rewrite
-  behaves exactly as specified in 7.4.
+Local harness pages are provided in `test-pages/` (see `test-pages/README.md`)
+so every procedure below can be run without needing live forms. Load the
+unpacked extension, enable "Allow access to file URLs" on the extension card
+(or serve `test-pages/` over HTTP), then run through each scenario.
+
+- **11.1** Full run-through: onboarding done → detect → review panel accuracy
+  → fill → submit-readiness. Use `test-pages/11.1-google-forms.html` first,
+  then repeat on a real Google Form if available (don't submit a real
+  application unless it's a test form).
+- **11.2** Same full run-through on Microsoft Forms. Use
+  `test-pages/11.2-ms-forms.html` first, then a real MS Form. If the real
+  form is iframe-embedded, also check `test-pages/10.2-iframe-embedded.html`
+  behavior (same-origin fields detected, cross-origin notice shown).
+- **11.3** Same full run-through on Wuzzuf. Use
+  `test-pages/11.3-wuzzuf-arabic.html` (Arabic labels + RTL page) to verify
+  the bilingual keyword maps and RTL-safe panel, then test a real Wuzzuf
+  application. Note any misclassified field and confirm a keyword-list fix
+  resolves it.
+- **11.4** Full run-through on a form outside all three platforms — use
+  `test-pages/11.4-generic.html` (plain careers-page markup) and confirm no
+  platform-specific assumption fails.
+- **11.5** Across two separate detect sessions on two different forms with
+  the same recurring question, confirm reuse-then-rewrite per 7.4. Use the
+  pair `test-pages/11.5a-recurring-question.html` and
+  `test-pages/11.5b-recurring-question.html` (identical "Why do you want to
+  work here?" question).
+- **11.6** (human) Onboard with a deliberately sparse/short CV and confirm
+  AI answers don't invent employers/titles/dates absent from the source.
+- **11.7** (human) Repeat 11.1 using only the NVIDIA free-tier path with
+  your own free `build.nvidia.com` key — full detect → generate → fill
+  completes with no paid key involved.
 
 ### Phase 12 — Privacy and store readiness
 

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Careers — Apply (generic) — Jobinzy Test Harness 11.4</title>
+  <style>
+    /* A generic company careers page — NO platform-specific structure.
+       Confirms genericness (11.4): detection must work with plain labels,
+       no Google/MS/Wuzzuf assumptions. */
+    * { box-sizing: border-box; }
+    body { font-family: Georgia, serif; background: #faf9f7; margin: 0; padding: 32px; color: #2b2b2b; }
+    .apply {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 28px 32px;
+      border: 1px solid #e3e0da;
+      border-radius: 12px;
+    }
+    .apply h1 { margin-top: 0; font-size: 24px; }
+    .apply label { display: block; margin: 14px 0 4px; font-weight: 700; font-size: 14px; }
+    .apply input, .apply textarea, .apply select {
+      width: 100%;
+      padding: 9px 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: inherit;
+    }
+    .apply button {
+      margin-top: 18px;
+      background: #1f2937;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 11px 26px;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+  <div class="apply">
+    <h1>Join Atlas &amp; Co</h1>
+    <p style="font-size:14px;color:#555">Thanks for your interest. Tell us a bit about yourself.</p>
+    <form>
+      <label for="a-name">Name</label>
+      <input id="a-name" name="candidate_name" type="text" required />
+
+      <label for="a-email">E-mail</label>
+      <input id="a-email" name="contact_email" type="email" required />
+
+      <label for="a-phone">Mobile</label>
+      <input id="a-phone" name="mobile" type="tel" />
+
+      <label for="a-referral">How did you hear about us?</label>
+      <select id="a-referral" name="referral">
+        <option value="">Choose one…</option>
+        <option value="linkedin">LinkedIn</option>
+        <option value="referral">Friend</option>
+        <option value="ads">Advertisement</option>
+        <option value="other">Other</option>
+      </select>
+
+      <label for="a-portfolio">Portfolio / personal site</label>
+      <input id="a-portfolio" name="portfolio_url" type="url" />
+
+      <label for="a-notes">Anything else we should know?</label>
+      <textarea id="a-notes" name="notes" rows="4"></textarea>
+
+      <label for="a-resume">Resume (PDF)</label>
+      <input id="a-resume" name="resume" type="file" accept="application/pdf" />
+
+      <button type="submit">Submit application</button>
+    </form>
+  </div>
+  <p style="text-align:center;color:#888;font-size:12px">Jobinzy test harness 11.4 — generic non-platform page.</p>
+</body>
+</html>

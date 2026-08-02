@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Application A — recurring question — Jobinzy Test Harness 11.5a</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #eef2ff; padding: 32px; }
+    .card { max-width: 500px; margin: 0 auto; background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    label { display: block; margin: 12px 0 4px; font-weight: 600; }
+    input, textarea { width: 100%; padding: 8px 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; }
+    textarea { min-height: 80px; }
+    h1 { font-size: 18px; }
+    .note { background: #fff7ed; border: 1px solid #fdba74; border-radius: 6px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Company A — Application form</h1>
+    <div class="note">
+      Phase 11.5: open this page and <b>11.5b</b> side by side. The question
+      "Why do you want to work here?" is identical on both. Fill A, then run
+      detection on B — the answer should come from the bank and be reusable,
+      then rewriteable per 7.4.
+    </div>
+    <form>
+      <label for="a-name">Full Name</label>
+      <input id="a-name" name="name" type="text" />
+
+      <label for="a-email">Email</label>
+      <input id="a-email" name="email" type="email" />
+
+      <label for="a-why">Why do you want to work here?</label>
+      <textarea id="a-why" name="why"></textarea>
+
+      <button type="submit" style="margin-top:14px;padding:9px 20px">Submit</button>
+    </form>
+  </div>
+</body>
+</html>

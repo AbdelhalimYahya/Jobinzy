@@ -1,0 +1,58 @@
+@startuml storage-layer
+' Jobinzy — storage layer (component diagram)
+' Source of truth: src/lib/storage.ts
+
+title Storage Layer — typed chrome.storage.local (Phase 1)
+
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+}
+skinparam database {
+  BackgroundColor #FFF4E0
+  BorderColor #B26A00
+}
+
+package "storage.ts" {
+  component "STORAGE_KEYS\njobinzy.profile / .answerBank /\n.aiSettings / .meta" as keys
+  component "Profile: getProfile() · setProfile() · validateProfile()" as profile
+  component "Answer bank: getAnswerBank() · upsertAnswerBankEntry() · deleteAnswerBankEntry()" as bank
+  component "AI settings: getAISettings() · setAISettings() · DEFAULT_AI_SETTINGS" as aisettings
+  component "Meta: getMeta() · setMeta() · DEFAULT_META" as meta
+  component "runMigrations() — idempotent (1.2)" as migrate
+  component "clearAllData() — destructive wipe (12.5)" as clear
+  component "ValidationError" as err
+}
+
+database "chrome.storage.local" as store
+
+profile --> store : read/write
+bank --> store : read/write
+aisettings --> store : read/write
+meta --> store : read/write
+clear --> store : remove profile/bank/aiSettings,\nreset meta.onboardingComplete=false
+migrate --> meta : compares schemaVersion to\nCURRENT_SCHEMA_VERSION (v1)
+
+profile ..> err : throws if fullName/email/phone missing
+bank ..> err : throws if questionText/answer empty
+aisettings ..> err : throws if baseUrl/model empty
+
+note bottom of store
+  Error-handling contract (documented for every caller):
+  • Getters (getProfile / getAnswerBank / getAISettings)
+    return null or [] for missing data — never throw.
+  • Setters THROW (ValidationError) on invalid input or
+    storage failure — callers treat rejection as fatal
+    for that write and surface it in the UI.
+  No other module in src/ may call chrome.storage.local.*
+  directly (AGENT.md §3 — grep-checked).
+end note
+
+note right of clear
+  Keeps ExtensionMeta.schemaVersion,
+  resets onboardingComplete → false so
+  the next open shows onboarding again.
+end note
+
+@enduml

@@ -1,0 +1,83 @@
+@startuml architecture
+' Jobinzy — extension architecture (component diagram)
+' Source of truth: src/ module layout + AGENT.md §3 (runtime surfaces).
+
+title Jobinzy — Extension Architecture
+
+skinparam componentStyle rectangle
+skinparam defaultFontSize 11
+skinparam packageStyle rectangle
+skinparam component {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+}
+skinparam database {
+  BackgroundColor #FFF4E0
+  BorderColor #B26A00
+}
+skinparam cloud {
+  BackgroundColor #E8F8E8
+  BorderColor #1E8E3E
+}
+
+package "Manifest V3 — permissions: storage, activeTab, scripting" {
+  component "Background Service Worker\nsrc/background/index.ts" as bg
+  component "Content Script (injected on click)\nsrc/content/index.tsx" as cs
+  component "Options Page (React)\nsrc/ui/options.tsx" as options
+}
+
+package "Shared lib — framework-free modules (src/lib/)" {
+  component "storage.ts\nchrome.storage.local wrapper" as storage
+  component "aiClient.ts\nAI HTTP client (only module)" as aiClient
+  component "detector/\nscan · context · classifyRules · classifyAi · classifyFileLink" as detector
+  component "answerGen.ts\nbank-first + AI generation" as answerGen
+  component "answerBank.ts\nnormalize + find match" as answerBank
+  component "fillEngine.ts\nnative fills + verify" as fillEngine
+  component "cvParser.ts\npdf.js extraction + structuring" as cvParser
+  component "domSettle.ts\nasync-render gate" as domSettle
+  component "types.ts\ndata model" as types
+  component "debug.ts\ndev-only logging" as debug
+}
+
+database "chrome.storage.local" as store
+cloud "AI provider (OpenAI-compatible)\nNVIDIA NIM / BYO" as aiProvider
+
+' ---- background -> lib ----
+bg --> storage : runMigrations / getMeta
+bg --> cs : executeScript (on click, after onboarding)
+bg ..> debug
+
+' ---- content script -> lib ----
+cs --> domSettle : waitForDomSettle()
+cs --> detector : detectFields() / findBlockedIframes()
+cs --> types
+cs ..> debug
+
+' ---- options page -> lib ----
+options --> storage : getProfile / setProfile / getMeta / setAISettings / getAnswerBank
+options --> cvParser : extractTextFromPdf / structureCv
+options --> aiClient : testConnection()
+options ..> debug
+
+' ---- lib internals ----
+detector --> aiClient : classifyByAi (AI fallback)
+detector --> storage : getAISettings
+answerGen --> aiClient : generate
+answerGen --> answerBank : normalizeQuestion / findBankMatch
+answerGen --> storage : getAnswerBank / upsertAnswerBankEntry
+cvParser --> aiClient : generate (structureCv)
+fillEngine --> types
+aiClient --> aiProvider : fetch POST /chat/completions (Bearer)
+storage --> store : typed CRUD only
+
+note bottom of aiClient
+  The ONLY module that constructs AI HTTP requests.
+  Concurrency limit (3.7) + retry (10.3).
+end note
+
+note bottom of storage
+  The ONLY module that calls chrome.storage.local.*
+  Error contract: getters return null/[], setters throw.
+end note
+
+@enduml

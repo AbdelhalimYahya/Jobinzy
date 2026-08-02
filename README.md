@@ -19,7 +19,7 @@ Your data stays on your device. Jobinzy never submits a form; you always press t
 
 ---
 
-**📖 Documentation:** [Getting started](#-getting-started) · [AI provider setup](#-ai-provider-setup) · [Privacy](#-privacy) · [Project structure](#-project-structure) · [Scripts](#-scripts) · [Testing](#-testing) · [Publishing](#-publishing-to-the-chrome-web-store) · [Contributing](CONTRIBUTING.md) · [License](#-license)
+**📖 Documentation:** [Getting started](#-getting-started) · [AI provider setup](#-ai-provider-setup) · [Privacy](#-privacy) · [Architecture diagrams](docs/README.md) · [Project structure](#-project-structure) · [Scripts](#-scripts) · [Testing](#-testing) · [Publishing](#-publishing-to-the-chrome-web-store) · [Contributing](CONTRIBUTING.md) · [License](#-license)
 
 </div>
 
@@ -135,6 +135,7 @@ jobinzy/
 │   │   └── types.ts       Profile, AnswerBankEntry, AISettings, DetectedField…
 │   └── ui/                Options page: onboarding, settings, answer bank
 ├── test-pages/            Manual-test harnesses for the extension (not shipped)
+├── docs/                 PlantUML architecture & flow diagrams (see docs/README.md)
 ├── scripts/
 │   ├── gen-icons.mjs      Generates extension icons
 │   └── zip.mjs            Packages dist/ into a store-ready zip
@@ -191,6 +192,17 @@ Then open a page (e.g. `http://localhost:3000/11.1-google-forms.html`), click **
 6. **Submit for review** — if rejected, the dashboard tells you why; fix and resubmit.
 
 The `release/` folder is gitignored; the zip is a build artifact, not source.
+
+## 📐 Architecture documentation
+
+The `docs/` folder contains **PlantUML diagrams** of the whole system — the
+component architecture, data model, storage layer, AI client, detection
+pipeline, answer resolution, fill engine, onboarding flow, content-script
+lifecycle, deployment topology, and use cases. Each diagram maps to the
+plan phases and is maintained in sync with the code.
+
+Start at [docs/README.md](docs/README.md) for the diagram index and render
+instructions.
 
 ## 🤝 Contributing
 

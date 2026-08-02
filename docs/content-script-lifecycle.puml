@@ -1,0 +1,65 @@
+@startuml content-script-lifecycle
+' Jobinzy — content script lifecycle (sequence diagram)
+' Source of truth: src/background/index.ts, src/content/index.tsx, Panel.tsx
+
+title Content Script Lifecycle — click to fill to close (Phases 4, 8–10)
+
+skinparam sequence {
+  ArrowColor #1A73E8
+  LifeLineBorderColor #1A73E8
+  LifeLineBackgroundColor #E8F0FE
+  ParticipantBorderColor #1A73E8
+  ParticipantBackgroundColor #F0F7FF
+}
+
+actor "User" as user
+participant "Background SW\n(index.ts)" as bg
+participant "Content script\n(index.tsx)" as cs
+participant "Shadow DOM host" as shadow
+participant "Panel.tsx" as panel
+participant "fillEngine.ts" as fill
+
+user -> bg : clicks toolbar icon
+bg -> bg : getMeta()
+alt onboarding incomplete (4.5)
+  bg -> bg : chrome.runtime.openOptionsPage() — no injection
+else complete
+  bg -> cs : chrome.scripting.executeScript(files: [contentScriptPath]) (4.1)
+  cs -> cs : ensureHost() — check #jobinzy-root exists (4.4)
+  alt host exists
+    cs -> shadow : re-show existing (display:block) — never duplicate
+  else
+    cs -> shadow : create div#jobinzy-root + attachShadow(open)\n+ inject triggerCss/panelCss + "Detect Form" button (4.2)
+  end
+
+  user -> cs : clicks "Detect Form" (4.3)
+  cs -> cs : runDetection()
+  cs -> cs : waitForDomSettle(document) — async-rendered forms (10.1)
+  cs -> cs : detectFields(document) → DetectedField[]
+  cs -> cs : findBlockedIframes(document) → count (10.2)
+  cs -> panel : mountPanel(fields, blockedIframes) — createRoot\ninside the same shadow root
+
+  panel -> panel : load getProfile() + getAISettings() once
+  loop every row
+    panel -> panel : resolveRow(i) — profile: resolveProfileField,\nopen-ended: resolveAnswer bank-first (6.1/6.2)
+    note right of panel : per-row loading state; failures → error + Retry (6.7)
+  end
+
+  user -> panel : reviews / edits / rewrites rows (8.1–8.3)
+  user -> panel : clicks "Fill form" (8.4)
+  panel -> fill : captureValues() — undo snapshot (10.6)
+  panel -> fill : fillFields(entries) — skips respected (9.5)\n+ post-fill verifyFilled (9.6)
+  fill --> panel : FillEntryResult[] → row statuses\n(mismatch → "Check manually")
+  user -> panel : "Undo fill" → restoreValues(snapshot) (10.6)
+  user -> panel : ↻ Re-scan → runDetection() again (10.5)
+  user -> panel : ✕ Close / Escape (8.7)
+  panel -> cs : onClose = removeHost() — unmount React + remove\nhost div entirely (4.4); next click re-injects fresh
+end
+
+note bottom
+  Everything lives inside one shadow root, so the host
+  page's CSS can't break the panel and the panel's CSS
+  can't break the page (plan §3.1, 4.2).
+end note
+
+@enduml

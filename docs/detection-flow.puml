@@ -1,0 +1,98 @@
+@startuml detection-flow
+' Jobinzy — Phase 5 field detection pipeline (activity diagram)
+' Source of truth: src/lib/detector/index.ts
+
+title Field Detection Pipeline (Phase 5)
+
+skinparam activity {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+}
+skinparam activityDiamond {
+  BackgroundColor #FFF4E0
+  BorderColor #B26A00
+}
+
+start
+
+:detectFields(root, aiSettings?) —
+loads getAISettings() if not supplied;
+
+:collectCandidates(root) — scan input / textarea /
+select / [role=textbox|combobox],
+recurse into open shadow roots (5.1)
+and same-origin iframes (10.2);
+
+:findBlockedIframes(root) — cross-origin iframes
+surfaced separately for the panel (10.2);
+
+repeat
+  :next candidate element;
+
+  if (already seen? — de-dupe by elementRef, 5.7) then (yes)
+    :skip;
+  elseif (isInteractive(el)? — visible & enabled, 5.9) then (no)
+    :skip;
+  else (yes)
+    :extractContext(el) → FieldContext
+    (label[for] · aria-labelledby · aria-label ·
+    placeholder · nearby text fallback) — 5.2;
+
+    if (el is input[type=file]? — 5.5a) then (yes)
+      :kind = "file-or-link"
+      note = fileLinkNote(el, context)
+      confidence = high;
+
+    else (no)
+      :profileKey = classifyByRules(context)
+      (EN+AR keyword maps) — 5.3;
+
+      if (profileKey found) then (yes)
+        :kind = "profile"
+        matchedProfileKey = profileKey
+        confidence = high;
+
+      else (no)
+        if (isFileOrLinkField(el, context)? — 5.5b
+        attach/upload/cv/video/link keywords EN+AR) then (yes)
+          :kind = "file-or-link"
+          note = fileLinkNote(el, context)
+          confidence = high;
+
+        else (no)
+          :openEnded = looksOpenEnded(context)
+          or el is TEXTAREA;
+
+          if (openEnded and aiSettings?.apiKey? — 5.4) then (yes)
+            :classifyByAi(context, settings) —
+            sends ONLY FieldContext, never page HTML;
+
+            if (AI call succeeds) then (yes)
+              :kind = ai.kind (unknown → "open-ended")
+              confidence = "ai";
+            else (no — never throws, resilience)
+              :kind = "open-ended"
+              confidence = "high";
+            endif
+          else (no)
+            :kind = openEnded ? "open-ended" : "unknown"
+            confidence = "high";
+          endif
+        endif
+      endif
+    endif
+
+    :push DetectedField;
+  endif
+repeat while (more candidates)
+
+:return DetectedField[];
+
+stop
+
+note bottom
+  Resilience: a failure in one field's AI call
+  never breaks detection for the rest of the form.
+end note
+
+@enduml

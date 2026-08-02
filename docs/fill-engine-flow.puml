@@ -1,0 +1,73 @@
+@startuml fill-engine
+' Jobinzy — fill engine (activity diagram)
+' Source of truth: src/lib/fillEngine.ts
+
+title Fill Engine (Phase 9)
+
+skinparam activity {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+}
+skinparam activityDiamond {
+  BackgroundColor #FFF4E0
+  BorderColor #B26A00
+}
+
+start
+
+:Panel handleFill() — collect FillEntry { field, value, skip }
+from every accepted row (skip = "Skip" | "I'll do this myself") (9.5);
+
+if (no entries? all empty / all skipped) then (yes)
+  :return early — nothing to fill;
+  stop
+endif
+
+:captureValues(elements) → ValueSnapshot[] (10.6 undo);
+
+:fillFields(entries) — iterate each entry;
+
+repeat
+  if (entry.skip? — 9.5) then (yes)
+    :never touched — continue;
+  else (no)
+    :scrollIntoViewIfNeeded(el) (9.4);
+    :flashHighlight(el) — 600ms outline (9.4);
+
+    if (custom widget? role=combobox / listbox /\naria-haspopup / contenteditable — 9.3) then (yes)
+      :fillComboBox — focus · click to open · type value ·\npoll for a matching rendered option up to 1500ms;\nno match → "complete manually" (never half-filled);
+    else (no)
+      if (input or textarea — 9.1) then (yes)
+        :fillTextInput — setNativeValue() via native setter,\nthen dispatch input + change events (React-safe);
+      elseif (select — 9.2) then (yes)
+        :fillSelect — exact option match first,\ncase-insensitive substring fallback;\nno match → ok:false + message (never arbitrary pick);
+      else (other)
+        :ok:false — "complete manually";
+      endif
+    endif
+
+    :record FillEntryResult { ok, value, message };
+  endif
+repeat while (more entries)
+
+:Post-fill validation pass (9.6) — for each ok result\nre-read element, verifyFilled(el, value);
+
+if (mismatch? page reset / ignored the value) then (yes)
+  :result.mismatch = true — panel shows "Check manually";
+else (no)
+  :result.mismatch = false — keep row status;
+endif
+
+:return FillEntryResult[] → panel updates row states\n(success keeps status, error shows inline message);
+
+:Panel: only keep undo snapshot if ≥1 field written;
+
+stop
+
+note bottom
+  Undo (10.6): restoreValues(snapshot) writes the pre-fill
+  values back with the same native events, so framework-bound
+  forms update correctly.
+end note
+
+@enduml

@@ -1,0 +1,59 @@
+@startuml onboarding-flow
+' Jobinzy — onboarding wizard (state diagram)
+' Source of truth: src/ui/onboarding/OnboardingWizard.tsx + step components
+
+title Onboarding Wizard — steps, persistence, resume (Phase 2)
+
+skinparam state {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+  StartColor #1A73E8
+  EndColor #1A73E8
+}
+skinparam stateArrow {
+  Color #1A73E8
+}
+
+[*] --> Step1_Profile : open options page\nonboarding incomplete (2.9)
+
+state "Step 1 — Profile (2.1)\nOnboardingForm" as Step1_Profile {
+  state "fullName · email · phone · nationalId (labeled exactly\n'National ID' with helper text) · address? · links[] (repeatable)" as p1
+}
+Step1_Profile --> Step2_CV : nextStep(patch) — persist profile\nper step (setProfile), advance
+
+state "Step 2 — CV (2.2–2.4)\nCvUploadStep" as Step2_CV {
+  state "accept application/pdf only (2.2)" as cv1
+  state "extractTextFromPdf(file) — pdf.js, in-browser (2.3)" as cv2
+  state "structureCv(cvText) → education/experience/skills\nvia AI; on failure → empty arrays, never throws (2.4)" as cv3
+}
+Step2_CV --> Step3_Style : done (or Skip)
+
+state "Step 3 — Style (2.5)\nStyleStep" as Step3_Style {
+  state "defaultStyle free text with example placeholder hints" as s1
+}
+Step3_Style --> Step4_QA : nextStep
+
+state "Step 4 — Q&A (2.6)\nQaStep" as Step4_QA {
+  state "≥2 suggested questions; blank answers filtered\nout before saving" as q1
+}
+Step4_QA --> Finalize : nextStep
+
+state "Finalize (2.7)" as Finalize {
+  state "setProfile(profile) flush, then\nsetMeta({ onboardingComplete: true })\n— only the onboarding path may set the gate" as f1
+}
+Finalize --> [*] : onFinished() → home view
+
+state "Edit profile mode (2.8)" as EditMode {
+  state "same wizard, pre-filled from getProfile();\nfinalize saves profile but NEVER sets\nonboardingComplete" as e1
+}
+EditMode --> Finalize : Save changes
+
+note bottom of Finalize
+  Resume strategy (documented in OnboardingWizard.tsx):
+  each step persists to storage immediately, so an
+  interrupted onboarding (2.9) re-hydrates from
+  getProfile() on reopen and restarts from step 1
+  with every already-entered field pre-filled.
+end note
+
+@enduml

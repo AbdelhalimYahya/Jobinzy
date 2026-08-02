@@ -1,0 +1,71 @@
+@startuml answer-resolution
+' Jobinzy — answer resolution flow (sequence diagram)
+' Source of truth: src/lib/answerGen.ts, src/lib/detector/resolveAnswers.ts,
+' src/content/panel/Panel.tsx (resolveRow)
+
+title Answer Resolution — bank-first, then AI (Phases 6 & 7)
+
+skinparam sequence {
+  ArrowColor #1A73E8
+  LifeLineBorderColor #1A73E8
+  LifeLineBackgroundColor #E8F0FE
+  ParticipantBorderColor #1A73E8
+  ParticipantBackgroundColor #F0F7FF
+}
+
+actor "User" as user
+participant "Panel (resolveRow)" as panel
+participant "resolveAnswers.ts" as resolver
+participant "answerBank.ts" as bank
+participant "answerGen.ts" as gen
+participant "storage.ts" as storage
+participant "aiClient.ts" as ai
+participant "AI provider" as provider
+
+user -> panel : panel opens / Retry / row resolves
+
+alt field.kind == "profile" (6.1 — no AI, no network)
+  panel -> resolver : resolveProfileField(field, profile)
+  resolver --> panel : value (or "" if missing)
+  panel --> user : status = auto-filled / needs-input
+
+else field.kind == "open-ended"
+  panel -> gen : resolveAnswer(field, profile, aiSettings, context)
+  gen -> storage : getAnswerBank()
+  storage --> gen : bank entries
+  gen -> bank : findBankMatch(questionText, bank)
+
+  alt bank match found (6.2 / 7.2)
+    gen -> storage : upsertAnswerBankEntry({...match, lastUsedAt: now}) (7.6)
+    gen --> panel : { answer, fromBank: true }
+    panel --> user : status = from-bank ("reused" badge)
+
+  else no match — generate fresh (6.3)
+    gen -> gen : buildPrompt(question, defaultStyle,\njobContext?, CV summary, onboardingQA)
+    gen -> ai : generate(prompt, settings, { maxTokens: 600 })
+    ai -> provider : POST /chat/completions (Bearer, rate-limited 3.7, retried 10.3)
+    provider --> ai : completion text
+    ai --> gen : raw answer
+    gen -> gen : enforceLengthCaps(field, raw) (6.6)
+    gen -> storage : upsertAnswerBankEntry (6.4 — persist)
+    gen --> panel : { answer, fromBank: false }
+    panel --> user : status = ai-generated
+  end
+
+  note over user, panel : User clicks "Rewrite" with an instruction (6.5 / 7.4)
+  user -> panel : confirmRewrite(instruction)
+  panel -> gen : regenerateWithInstruction(field, instruction, profile, aiSettings)
+  gen -> gen : buildPrompt(..., instruction)
+  gen -> ai : generate(prompt, settings)
+  gen -> storage : upsertAnswerBankEntry({customInstruction,\nsourceUrl preserved})
+  gen --> panel : rewritten answer
+  panel --> user : status = ai-generated
+end
+
+note bottom
+  Errors never abort the batch (6.7): a failed row
+  shows an inline error + Retry, the rest stay usable.
+  Length caps: 200 chars single-line, 4000 textarea (6.6).
+end note
+
+@enduml

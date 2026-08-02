@@ -1,0 +1,119 @@
+@startuml data-model
+' Jobinzy — data model (class diagram)
+' Source of truth: src/lib/types.ts (matches plan.md §5 exactly).
+
+title Jobinzy — Data Model (src/lib/types.ts)
+
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+}
+
+class Profile {
+  + fullName: string
+  + email: string
+  + phone: string
+  + nationalId: string
+  + address?: string
+  + links: ProfileLink[]
+  + cvText: string
+  + cvFileName?: string
+  + structuredCv: StructuredCv
+  + onboardingQA: { question, answer }[]
+  + defaultStyle: string
+  + createdAt: string
+  + updatedAt: string
+}
+
+class ProfileLink {
+  + label: string
+  + url: string
+}
+
+class StructuredCv {
+  + education: string[]
+  + experience: string[]
+  + skills: string[]
+}
+
+class AnswerBankEntry {
+  + questionText: string
+  + answer: string
+  + customInstruction?: string
+  + sourceUrl?: string
+  + lastUsedAt: string
+  + updatedAt: string
+}
+
+class AISettings {
+  + provider: "nvidia-free" | "byo"
+  + baseUrl: string
+  + apiKey: string
+  + model: string
+}
+
+class ExtensionMeta {
+  + schemaVersion: number
+  + onboardingComplete: boolean
+}
+
+class DetectedField {
+  + elementRef: HTMLElement
+  + kind: DetectedFieldKind
+  + matchedProfileKey?: ProfileFieldKey
+  + questionText?: string
+  + note?: string
+  + confidence: "high" | "ai"
+}
+
+class FieldContext {
+  + labelText?: string
+  + ariaLabel?: string
+  + placeholder?: string
+  + nearbyText?: string
+  + name?: string
+  + id?: string
+}
+
+enum DetectedFieldKind {
+  profile
+  open-ended
+  file-or-link
+  unknown
+}
+
+enum ProfileFieldKey {
+  fullName
+  firstName
+  lastName
+  email
+  phone
+  nationalId
+  address
+  linkedin
+  portfolio
+  github
+  drive
+  otherLink
+}
+
+Profile "1" o-- "1..*" ProfileLink : links
+Profile "1" o-- "1" StructuredCv : structuredCv
+DetectedField "1" o-- "1" FieldContext : extracted from
+DetectedField ..> DetectedFieldKind
+DetectedField ..> ProfileFieldKey : matchedProfileKey
+
+note right of Profile
+  Single user profile per install (v1).
+  nationalId is its own labeled field, never
+  folded into a generic "extra info" box.
+end note
+
+note bottom of ExtensionMeta
+  schemaVersion must be bumped when Profile /
+  AnswerBankEntry / AISettings shapes change,
+  with a migration in storage.runMigrations().
+end note
+
+@enduml

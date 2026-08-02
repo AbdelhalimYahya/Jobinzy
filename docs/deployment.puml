@@ -1,0 +1,69 @@
+@startuml deployment
+' Jobinzy — deployment / runtime topology (deployment diagram)
+
+title Deployment — dev, store packaging, and runtime
+
+skinparam node {
+  BackgroundColor #F3F0FF
+  BorderColor #5B3DF5
+}
+skinparam component {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+}
+skinparam database {
+  BackgroundColor #FFF4E0
+  BorderColor #B26A00
+}
+skinparam cloud {
+  BackgroundColor #E8F8E8
+  BorderColor #1E8E3E
+}
+
+node "Developer machine" {
+  component "npm run dev / build\n→ dist/" as dev
+  component "npm run package\n→ release/jobinzy.zip\n(manifest at zip root)" as pkg
+  component "scripts/gen-icons.mjs\n→ public/icons/" as icons
+  component "privacy-policy.html\n(human-hosted for store)" as pp
+}
+
+node "Chrome (user browser)" {
+  component "Jobinzy extension (Manifest V3)" as ext {
+    component "Background SW" as bg
+    component "Content script + panel\n(injected per click)" as cs
+    component "Options page\n(onboarding / settings / bank)" as opts
+  }
+  database "chrome.storage.local\nprofile · answer bank · AI settings" as store
+}
+
+cloud "AI provider (OpenAI-compatible)" as provider {
+  component "NVIDIA NIM — free tier\n(integrate.api.nvidia.com)" as nvidia
+  component "BYO endpoint\n(OpenAI or any compatible)" as byo
+}
+
+dev ..> ext : Load unpacked → dist/ (dev)
+pkg ..> ext : Chrome Web Store install (prod)
+icons ..> dev : icon16/32/48/128.png
+pp ..> pkg : linked as privacy-policy URL in listing
+
+bg --> store : migrations / meta (storage)
+cs --> store : profile, bank, settings (via storage.ts)
+opts --> store : profile, bank, settings (via storage.ts)
+cs ..> provider : HTTPS, only when user triggers AI (Bearer key)
+opts ..> provider : testConnection / structureCv (Bearer key)
+provider --> nvidia
+provider --> byo
+
+note bottom of store
+  Local-first: national ID, CV text, and answers
+  never leave the device except inside a prompt
+  sent directly to the user-configured AI provider.
+  No developer-operated backend exists in v1.
+end note
+
+note right of provider
+  One OpenAI-compatible client (aiClient.ts) talks to
+  either provider by swapping baseUrl + apiKey + model.
+end note
+
+@enduml

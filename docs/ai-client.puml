@@ -1,0 +1,65 @@
+@startuml ai-client
+' Jobinzy — AI client (sequence diagram)
+' Source of truth: src/lib/aiClient.ts
+
+title AI Client — generate() & testConnection() (Phases 3.4/3.5, 3.7, 10.3)
+
+skinparam sequence {
+  ArrowColor #1E8E3E
+  LifeLineBorderColor #1E8E3E
+  LifeLineBackgroundColor #E6F4EA
+  ParticipantBorderColor #1E8E3E
+  ParticipantBackgroundColor #F0F8F2
+}
+
+participant "Caller (answerGen / cvParser /\nclassifyAi / settings UI)" as caller
+participant "aiClient.generate()" as gen
+participant "Concurrency limiter" as limiter
+participant "withRetry (10.3)" as retry
+participant "fetch → provider" as http
+
+== generate(prompt, settings, opts) ==
+
+caller -> gen : generate(prompt, settings)
+gen -> limiter : runWithConcurrencyLimit(fn)
+
+alt slot free (inFlight < 2)
+  limiter -> retry : fn()
+  retry -> gen : generateOnce()
+  gen -> gen : requestCompletion() — buildRequestUrl (tolerates\nbase URL already ending in /chat/completions)
+  gen -> http : POST {baseUrl}/chat/completions\nAuthorization: Bearer <apiKey>\n{ model, messages:[{role:user}], max_tokens, temperature }\nAbortController timeout 60s
+  http --> gen : response
+  alt HTTP ok
+    gen -> gen : extractContent() → choices[0].message.content
+    gen --> caller : trimmed answer text
+  else HTTP error
+    gen -> gen : HttpStatusError(status, message)
+    retry -> retry : isRetryable? 429 / ≥500 / TypeError → retry\nonce after backoff; 400/401/403/timeout → give up
+    retry --> caller : throw
+  else timeout (AbortError)
+    gen --> caller : throw "timed out after 60s"
+  end
+else queue (no slot)
+  limiter -> limiter : push waiter; runs when a slot frees up
+end
+
+== testConnection(settings) (3.4) — NOT rate-limited ==
+
+caller -> gen : testConnection(settings)
+gen -> gen : "Reply with the single word OK."\nmaxTokens 8, temp 0, timeout 15s
+gen -> http : POST /chat/completions
+alt ok
+  gen --> caller : { ok: true, "Connection successful" }
+else failure
+  gen -> gen : classifyFailure(status, detail)
+  gen --> caller : { ok: false, message } —\n"Invalid API key" · "Rate limited" ·\n"Endpoint not found" · "Provider error" · network msg
+end
+
+note bottom
+  MAX_CONCURRENT_REQUESTS = 2 (3.7).
+  MAX_PROMPT_CHARS = 12000 — trimPrompt() caps prompt size.
+  This is the ONLY module that constructs AI HTTP requests
+  (AGENT.md §3) — grep confirms no raw fetch elsewhere.
+end note
+
+@enduml

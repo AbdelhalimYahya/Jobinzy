@@ -1,0 +1,81 @@
+@startuml use-cases
+' Jobinzy — use cases (use case diagram)
+
+title Jobinzy — Use Cases
+
+skinparam actor {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+}
+skinparam usecase {
+  BackgroundColor #F0F7FF
+  BorderColor #1A73E8
+}
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #CCCCCC
+}
+
+actor "Job seeker" as user
+
+rectangle "Onboarding (Phase 2)" {
+  usecase "Complete onboarding\n(profile, CV, style, Q&A)" as UC1
+  usecase "Upload CV (PDF) and get it parsed\nclient-side, then AI-structured" as UC2
+  usecase "Edit profile later" as UC3
+}
+
+rectangle "AI settings (Phase 3)" {
+  usecase "Configure NVIDIA free tier\n(no credit card)" as UC4
+  usecase "Bring your own OpenAI-compatible key" as UC5
+  usecase "Test connection" as UC6
+}
+
+rectangle "Detection & review (Phases 4–8)" {
+  usecase "Trigger detection from the\ntoolbar on any job form" as UC7
+  usecase "Review detected fields with\nstatus chips + confidence" as UC8
+  usecase "Accept / Skip / I'll do this myself\nper field" as UC9
+  usecase "Edit an answer manually" as UC10
+  usecase "Rewrite an answer with a\nper-field AI instruction" as UC11
+  usecase "Get file/link field guidance\nand paste a link inline" as UC12
+}
+
+rectangle "Filling (Phase 9)" {
+  usecase "Fill the form (batch)\n— never auto-submits" as UC13
+  usecase "Undo the last fill" as UC14
+}
+
+rectangle "Answer bank & data (Phases 7, 12)" {
+  usecase "Reuse recurring answers\nfrom the local bank" as UC15
+  usecase "Manage saved answers\n(options page)" as UC16
+  usecase "Clear all my data\n(destructive, confirmed)" as UC17
+}
+
+user --> UC1
+user --> UC2
+user --> UC3
+user --> UC4
+user --> UC5
+user --> UC6
+user --> UC7
+user --> UC8
+user --> UC9
+user --> UC10
+user --> UC11
+user --> UC12
+user --> UC13
+user --> UC14
+user --> UC15
+user --> UC16
+user --> UC17
+
+UC6 ..> "AI provider" : minimal OK prompt
+UC2 ..> "AI provider" : structure CV text
+UC11 ..> "AI provider" : rewrite instruction
+
+note bottom
+  Design guardrails reflected here: detection is always
+  user-triggered (UC7), files are never auto-attached (UC12),
+  and the extension never submits a form (UC13).
+end note
+
+@enduml

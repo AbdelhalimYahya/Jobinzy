@@ -5,6 +5,7 @@
  */
 import * as pdfjsLib from "pdfjs-dist";
 import { generate, trimPrompt } from "./aiClient";
+import { extractJson } from "./json";
 import type { AISettings, Profile } from "./types";
 
 // pdf.js needs a worker; Vite's `new URL(..., import.meta.url)` emits the
@@ -72,18 +73,6 @@ export async function structureCv(
     console.warn("[Jobinzy] structureCv failed, falling back to empty arrays:", err);
     return EMPTY_STRUCTURED;
   }
-}
-
-function extractJson(raw: string): string {
-  // Tolerate ```json ... ``` fences and stray leading/trailing text.
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) return fenced[1].trim();
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) {
-    return raw.slice(start, end + 1);
-  }
-  return raw.trim();
 }
 
 function toStringArray(value: unknown): string[] {

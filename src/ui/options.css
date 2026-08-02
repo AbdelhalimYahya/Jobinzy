@@ -1,6 +1,14 @@
-/* Jobinzy options page styles (placeholder; expanded in later phases). */
+/* Jobinzy options page styles (onboarding wizard + home shell). */
 :root {
   color-scheme: light;
+  --jf-primary: #4f46e5;
+  --jf-primary-dark: #4338ca;
+  --jf-bg: #f6f7fb;
+  --jf-card: #ffffff;
+  --jf-border: #e3e6ee;
+  --jf-text: #1f2430;
+  --jf-muted: #6b7280;
+  --jf-danger: #dc2626;
 }
 
 * {
@@ -10,6 +18,248 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: #f6f7fb;
-  color: #1f2430;
+  background: var(--jf-bg);
+  color: var(--jf-text);
+}
+
+.jf-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: var(--jf-muted);
+}
+
+.jf-wizard,
+.jf-home {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 20px 60px;
+}
+
+.jf-wizard-header {
+  margin-bottom: 20px;
+}
+
+.jf-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.jf-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+
+.jf-step {
+  font-size: 13px;
+  color: var(--jf-muted);
+  background: #eef0f6;
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.jf-step.is-active {
+  color: #fff;
+  background: var(--jf-primary);
+}
+
+.jf-step.is-done {
+  color: var(--jf-primary-dark);
+}
+
+.jf-card {
+  background: var(--jf-card);
+  border: 1px solid var(--jf-border);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+.jf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.jf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.jf-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.jf-req {
+  color: var(--jf-danger);
+}
+
+.jf-opt {
+  font-weight: 400;
+  color: var(--jf-muted);
+  font-size: 13px;
+}
+
+.jf-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--jf-muted);
+}
+
+.jf-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--jf-danger);
+}
+
+.jf-input,
+.jf-textarea,
+.jf-file {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--jf-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--jf-text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.jf-input:focus,
+.jf-textarea:focus,
+.jf-file:focus {
+  outline: none;
+  border-color: var(--jf-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.jf-input-error {
+  border-color: var(--jf-danger);
+}
+
+.jf-textarea {
+  resize: vertical;
+}
+
+.jf-link-row,
+.jf-qa-row {
+  display: grid;
+  gap: 8px;
+  align-items: start;
+}
+
+.jf-link-row {
+  grid-template-columns: 1fr 2fr auto;
+}
+
+.jf-qa-row {
+  grid-template-columns: 1fr 2fr auto;
+}
+
+.jf-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.jf-btn {
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.jf-btn:active {
+  transform: translateY(1px);
+}
+
+.jf-btn-primary {
+  background: var(--jf-primary);
+  color: #fff;
+}
+
+.jf-btn-primary:hover {
+  background: var(--jf-primary-dark);
+}
+
+.jf-btn-ghost {
+  background: transparent;
+  color: var(--jf-primary-dark);
+  border: 1px solid var(--jf-border);
+}
+
+.jf-btn-ghost:hover {
+  background: #eef0f6;
+}
+
+.jf-btn-danger {
+  background: #fee2e2;
+  color: var(--jf-danger);
+}
+
+.jf-btn-danger:hover {
+  background: #fecaca;
+}
+
+.jf-btn-sm {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.jf-status {
+  font-size: 13px;
+  color: var(--jf-muted);
+}
+
+.jf-status-ok {
+  color: #15803d;
+}
+
+.jf-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--jf-border);
+  border-top-color: var(--jf-primary);
+  border-radius: 50%;
+  animation: jf-spin 0.8s linear infinite;
+  vertical-align: -1px;
+  margin-right: 6px;
+}
+
+@keyframes jf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.jf-finalize {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jf-home-header {
+  margin-bottom: 20px;
+}
+
+.jf-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }

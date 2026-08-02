@@ -5,5 +5,13 @@
 node_modules/
 dist/
 
+# Secrets and env files
+.env
+.env.local
+*.local
+
 # Planning doc — kept local only, not pushed to GitHub
 plan.md
+
+# Test coverage
+coverage/

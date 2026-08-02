@@ -1,0 +1,9 @@
+# Freebuff desktop app local data (not part of the project)
+.freebuff/
+
+# Dependencies and build output (per test.md Phase 0)
+node_modules/
+dist/
+
+# Planning doc — kept local only, not pushed to GitHub
+plan.md

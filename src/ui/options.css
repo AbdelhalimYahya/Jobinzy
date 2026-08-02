@@ -352,3 +352,28 @@ body {
   gap: 6px;
   flex-shrink: 0;
 }
+
+/* Clear-all-data danger zone (Phase 12.5) */
+.jf-danger-wrap {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--jf-border);
+}
+
+.jf-danger-zone {
+  background: #fff7f7;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.jf-danger-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--jf-danger);
+}

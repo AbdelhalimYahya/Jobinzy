@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Jobinzy</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2430; background: #f6f7fb; margin: 0; padding: 32px 16px; line-height: 1.6; }
+    main { max-width: 720px; margin: 0 auto; background: #fff; border: 1px solid #e3e6ee; border-radius: 14px; padding: 32px 36px; }
+    h1 { font-size: 26px; margin: 0 0 4px; }
+    h2 { font-size: 18px; margin: 28px 0 8px; }
+    .updated { color: #6b7280; font-size: 13px; margin: 0 0 20px; }
+    p, li { font-size: 14px; }
+    ul { padding-left: 20px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+    th, td { border: 1px solid #e3e6ee; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f3f4f8; }
+    code { background: #f1f3f9; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Jobinzy Privacy Policy</h1>
+    <p class="updated">Last updated: version 0.1.0</p>
+
+    <p>
+      Jobinzy is a browser extension that helps you fill job application forms
+      faster. This policy explains exactly what data the extension handles,
+      where it lives, and what leaves your device.
+    </p>
+
+    <h2>1. What we collect</h2>
+    <p>All of the following is entered by you, stored only on your device:</p>
+    <table>
+      <thead>
+        <tr><th>Data</th><th>Where it is stored</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Full name, email address, phone number, national ID, address</td><td><code>chrome.storage.local</code> (profile)</td></tr>
+        <tr><td>Links you save (portfolio, LinkedIn, GitHub, Drive, etc.)</td><td><code>chrome.storage.local</code> (profile)</td></tr>
+        <tr><td>Your CV file name and the text extracted from your CV</td><td><code>chrome.storage.local</code> (profile <code>cvFileName</code>, <code>cvText</code>)</td></tr>
+        <tr><td>Structured CV data parsed during onboarding (education, experience, skills)</td><td><code>chrome.storage.local</code> (profile <code>structuredCv</code>)</td></tr>
+        <tr><td>Optional onboarding Q&amp;A answers you provide</td><td><code>chrome.storage.local</code> (profile <code>onboardingQA</code>)</td></tr>
+        <tr><td>Your default answering style / tone instruction</td><td><code>chrome.storage.local</code> (profile <code>defaultStyle</code>)</td></tr>
+        <tr><td>Saved answers for recurring form questions, with optional custom rewrite instructions and the page where each was first seen</td><td><code>chrome.storage.local</code> (answer bank)</td></tr>
+        <tr><td>Your AI provider settings: provider choice, base URL, model, API key</td><td><code>chrome.storage.local</code> (AI settings)</td></tr>
+        <tr><td>Extension metadata (onboarding-complete flag, schema version)</td><td><code>chrome.storage.local</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2>2. Where your data is stored</h2>
+    <p>
+      Everything above is stored locally on your own device in
+      <code>chrome.storage.local</code>. Jobinzy operates <strong>no backend
+      server</strong> and has no server-side storage. Nothing you enter is
+      uploaded to any server controlled by the extension's developer — there
+      is no such server.
+    </p>
+
+    <h2>3. What is sent to third parties, and when</h2>
+    <p>
+      The only time any of your data leaves your device is when <strong>you</strong>
+      ask Jobinzy to generate or rewrite an answer (or structure your CV),
+      and you have configured an AI provider. At that moment, a prompt is sent
+      directly from your browser to the AI provider <strong>you</strong> chose
+      and configured in Settings (NVIDIA NIM free tier, or any
+      OpenAI-compatible provider whose key you supply). That prompt may
+      include:
+    </p>
+    <ul>
+      <li>your CV text and structured CV data,</li>
+      <li>your onboarding Q&amp;A answers and default style instruction,</li>
+      <li>the text of the specific form question you are answering, and</li>
+      <li>a previously saved answer (when you ask for a rewrite).</li>
+    </ul>
+    <p>
+      No data is sent to the AI provider without your explicit action — the
+      extension never generates answers silently in the background, and it
+      never submits any form on your behalf.
+    </p>
+
+    <h2>4. What the extension does not do</h2>
+    <ul>
+      <li>It does not run automatically on pages you visit; it only acts when you click the toolbar button.</li>
+      <li>It does not attach files to forms, and never submits a form for you.</li>
+      <li>It does not use analytics, tracking, advertising, or fingerprinting.</li>
+      <li>It does not read pages you haven't explicitly triggered it on (it uses the <code>activeTab</code> permission, not broad site access).</li>
+    </ul>
+
+    <h2>5. Deleting your data</h2>
+    <p>
+      Open the Jobinzy options page → <strong>Clear all my data</strong> to
+      permanently delete your profile, saved answers, and AI settings from the
+      device. Removing the extension also removes everything the extension
+      stored.
+    </p>
+
+    <h2>6. Changes to this policy</h2>
+    <p>
+      If this policy changes, the updated version will be published at this
+      same URL with a new "last updated" date.
+    </p>
+  </main>
+</body>
+</html>

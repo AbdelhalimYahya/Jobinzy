@@ -5,6 +5,7 @@ import { getMeta } from "../lib/storage";
 import { OnboardingWizard } from "./onboarding/OnboardingWizard";
 import { AISettingsForm } from "./settings/AISettingsForm";
 import { AnswerBankView } from "./bank/AnswerBankView";
+import { ClearDataControl } from "./settings/ClearDataControl";
 import "./options.css";
 
 type View =
@@ -95,6 +96,11 @@ function OptionsApp() {
           Saved answers
         </button>
       </nav>
+
+      {/* 12.5 — destructive action, clearly separated from normal settings. */}
+      <div className="jf-danger-wrap">
+        <ClearDataControl onCleared={() => setView("onboarding")} />
+      </div>
     </div>
   );
 }

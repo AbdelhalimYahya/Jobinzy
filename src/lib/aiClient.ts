@@ -64,49 +64,61 @@ async function requestCompletion(
  * Sends a single chat completion request against an OpenAI-compatible
  * endpoint (NVIDIA NIM or any BYO provider — same function, swapped URL/key).
  * Throws on network error, non-OK status, or a malformed response body.
+ * Transient failures (network, 5xx, rate-limit) are retried once (10.3).
  */
 export async function generate(
   prompt: string,
   settings: AISettings,
   opts: GenerateOptions = {}
 ): Promise<string> {
-  return runWithConcurrencyLimit(async () => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    try {
-      const res = await requestCompletion(settings, prompt, opts, controller.signal);
+  return runWithConcurrencyLimit(() =>
+    withRetry(() => generateOnce(prompt, settings, opts), 1, RETRY_DELAY_MS, isRetryable)
+  );
+}
 
-      if (!res.ok) {
-        let detail = "";
-        try {
-          const body = await res.json();
-          detail = body?.error?.message ?? JSON.stringify(body);
-        } catch {
-          detail = await res.text().catch(() => "");
-        }
-        throw new Error(`AI request failed (${res.status}): ${detail}`);
-      }
+/** The actual single attempt behind generate() (wrapped by 10.3 retry). */
+async function generateOnce(
+  prompt: string,
+  settings: AISettings,
+  opts: GenerateOptions
+): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await requestCompletion(settings, prompt, opts, controller.signal);
 
-      const data: unknown = await res.json();
-      const content = extractContent(data);
-      if (typeof content !== "string" || content.length === 0) {
-        throw new Error("AI response did not contain a text completion");
+    if (!res.ok) {
+      let detail = "";
+      try {
+        const body = await res.json();
+        detail = body?.error?.message ?? JSON.stringify(body);
+      } catch {
+        detail = await res.text().catch(() => "");
       }
-      return content.trim();
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        throw new Error(`AI request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
+      throw new HttpStatusError(res.status, `AI request failed (${res.status}): ${detail}`);
     }
-  });
+
+    const data: unknown = await res.json();
+    const content = extractContent(data);
+    if (typeof content !== "string" || content.length === 0) {
+      throw new Error("AI response did not contain a text completion");
+    }
+    return content.trim();
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(`AI request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /**
  * Sends a minimal trivial prompt to verify settings. Never throws — returns
- * a human-readable result message for the UI (3.4).
+ * a human-readable result message for the UI (3.4). Transient failures
+ * (network, 5xx, rate-limit) are retried once (10.3) before the final
+ * failure is classified.
  */
 export async function testConnection(
   settings: AISettings
@@ -119,6 +131,21 @@ export async function testConnection(
   }
   // Single user action — intentionally NOT routed through the concurrency
   // limiter (that exists to throttle bulk answer generation, not one click).
+  try {
+    await withRetry(() => runTestRequest(settings), 1, RETRY_DELAY_MS, isRetryable);
+    return { ok: true, message: "Connection successful — AI provider reached." };
+  } catch (err) {
+    const status = err instanceof HttpStatusError
+      ? err.status
+      : err instanceof Error && err.name === "AbortError"
+        ? 0
+        : undefined;
+    return { ok: false, message: classifyFailure(status, messageOf(err)) };
+  }
+}
+
+/** One test-connection attempt; throws HttpStatusError on a non-OK reply. */
+async function runTestRequest(settings: AISettings): Promise<void> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TEST_TIMEOUT_MS);
   try {
@@ -128,17 +155,9 @@ export async function testConnection(
       { maxTokens: 8, temperature: 0 },
       controller.signal
     );
-
     if (!res.ok) {
-      return {
-        ok: false,
-        message: classifyFailure(res.status, `HTTP ${res.status}`),
-      };
+      throw new HttpStatusError(res.status, `HTTP ${res.status}`);
     }
-    return { ok: true, message: "Connection successful — AI provider reached." };
-  } catch (err) {
-    const status = err instanceof Error && err.name === "AbortError" ? 0 : undefined;
-    return { ok: false, message: classifyFailure(status, messageOf(err)) };
   } finally {
     clearTimeout(timeout);
   }
@@ -191,15 +210,49 @@ function releaseWaiter(): void {
 
 // ---- Retry helper (10.3) ---------------------------------------------------
 
+/** HTTP status-carrying error, so failures can be classified & retried. */
+class HttpStatusError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "HttpStatusError";
+    this.status = status;
+  }
+}
+
+/** Short backoff between automatic retries (kept small for a snappy UI). */
+const RETRY_DELAY_MS = 500;
+
+/**
+ * Which failures are worth retrying: network-level errors (TypeError),
+ * rate-limits (429) and server errors (5xx). Auth (401/403), validation
+ * (400) and timeouts are permanent — no point hammering the provider.
+ */
+function isRetryable(err: unknown): boolean {
+  if (err instanceof TypeError) return true;
+  if (err instanceof HttpStatusError) return err.status === 429 || err.status >= 500;
+  if (err instanceof Error) {
+    if (err.name === "AbortError") return false;
+    const m = /\((\d{3})\)/.exec(err.message);
+    if (m) {
+      const status = Number(m[1]);
+      return status === 429 || status >= 500;
+    }
+  }
+  return false;
+}
+
 /**
  * Retries `fn` up to `retries` times on failure, with a short backoff.
+ * `shouldRetryFn` decides which failures are worth retrying (default: all).
  * Used by generate(), testConnection() and cvParser's structureCv so retry
  * behavior isn't reimplemented per feature.
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
   retries = 1,
-  delayMs = 800
+  delayMs = 800,
+  shouldRetryFn: (err: unknown) => boolean = () => true
 ): Promise<T> {
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -207,8 +260,10 @@ export async function withRetry<T>(
       return await fn();
     } catch (err) {
       lastErr = err;
-      if (attempt < retries) {
+      if (attempt < retries && shouldRetryFn(err)) {
         await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+      } else if (attempt < retries) {
+        break; // non-retryable — give up immediately
       }
     }
   }

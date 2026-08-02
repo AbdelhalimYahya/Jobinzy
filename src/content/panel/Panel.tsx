@@ -39,11 +39,14 @@ import { getAISettings, getProfile } from "../../lib/storage";
 import { resolveProfileField } from "../../lib/detector/resolveAnswers";
 import { regenerateWithInstruction, resolveAnswer } from "../../lib/answerGen";
 import {
+  captureValues,
   fillField,
   fillFields,
   flashHighlight,
+  restoreValues,
   scrollIntoViewIfNeeded,
   type FillEntry,
+  type ValueSnapshot,
 } from "../../lib/fillEngine";
 
 type SkipMode = "accept" | "skip" | "manual";
@@ -70,6 +73,10 @@ interface RowState {
 interface PanelProps {
   fields: DetectedField[];
   onClose: () => void;
+  /** 10.5 — re-runs detection (called by the content script). */
+  onRescan?: () => void;
+  /** 10.2 — count of cross-origin iframes whose fields can't be read. */
+  blockedIframes?: number;
 }
 
 const STATUS_LABEL: Record<RowStatus, string> = {
@@ -104,7 +111,7 @@ function initRow(field: DetectedField): RowState {
   };
 }
 
-export function Panel({ fields, onClose }: PanelProps) {
+export function Panel({ fields, onClose, onRescan, blockedIframes = 0 }: PanelProps) {
   // file-or-link fields live in a separate helper section (8.3), never in
   // the auto-answer/fill list.
   const mainFields = useMemo(
@@ -123,6 +130,8 @@ export function Panel({ fields, onClose }: PanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   const [hasFilled, setHasFilled] = useState(false);
+  // 10.6 — pre-fill values of the last "Fill form", so the user can undo it.
+  const [lastFillSnapshot, setLastFillSnapshot] = useState<ValueSnapshot[] | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   // Set on unmount so async resolutions (resolveRow/confirmRewrite/saveEdit)
@@ -284,6 +293,8 @@ export function Panel({ fields, onClose }: PanelProps) {
    * and post-fill verification are centralized in fillFields: the entry's
    * skip flag (9.5) ensures skipped rows are never touched, and values the
    * page resets are flagged as a mismatch (9.6) instead of shown as success.
+   * 10.6 — the pre-fill values of every element we're about to touch are
+   * snapshotted first so the user can undo the fill.
    */
   async function handleFill(): Promise<void> {
     const entries: FillEntry[] = [];
@@ -299,7 +310,16 @@ export function Panel({ fields, onClose }: PanelProps) {
     if (entries.length === 0) return;
     setHasFilled(true);
 
+    // 10.6 — capture the values we're about to overwrite (skipped rows are
+    // never touched, so they don't need restoring).
+    setLastFillSnapshot(captureValues(entries.filter((e) => !e.skip).map((e) => e.field.elementRef)));
+
     const results = await fillFields(entries);
+    // Only keep the undo snapshot if at least one field was actually written;
+    // an all-failed fill (e.g. unsupported widgets) gets no undo button.
+    if (!results.some((r) => r.ok)) {
+      setLastFillSnapshot(null);
+    }
     results.forEach((res) => {
       const i = rows.findIndex((r) => r.field.elementRef === res.field.elementRef);
       if (i < 0) return;
@@ -315,6 +335,23 @@ export function Panel({ fields, onClose }: PanelProps) {
           : undefined,
       });
     });
+  }
+
+  /** 10.6 — restores the pre-fill values of the last "Fill form". */
+  function handleUndo(): void {
+    if (!lastFillSnapshot) return;
+    restoreValues(lastFillSnapshot);
+    setLastFillSnapshot(null);
+    setHasFilled(false);
+    // The DOM no longer reflects a failed fill — drop stale mismatch badges
+    // so the panel doesn't contradict what's on the page.
+    setRows((prev) =>
+      prev.map((r) =>
+        r.status === "mismatch"
+          ? { ...r, status: "needs-input", error: undefined }
+          : r
+      )
+    );
   }
 
   // ---- drag (8.6) ------------------------------------------------------------
@@ -350,6 +387,14 @@ export function Panel({ fields, onClose }: PanelProps) {
   }
 
   const totalCount = fields.length;
+  // 10.4 — live summary counts: auto-resolved (profile/AI/bank) vs needing
+  // input (including errors/mismatches the user should look at).
+  const autoCount = rows.filter((r) =>
+    ["auto-filled", "ai-generated", "from-bank"].includes(r.status)
+  ).length;
+  const needCount = rows.filter((r) =>
+    ["needs-input", "error", "mismatch"].includes(r.status)
+  ).length;
 
   return (
     <section
@@ -376,10 +421,22 @@ export function Panel({ fields, onClose }: PanelProps) {
         <div className="jbz-header-title">
           <h2 className="jbz-panel-title">Jobinzy</h2>
           <p className="jbz-panel-sub">
-            {totalCount} field{totalCount === 1 ? "" : "s"} detected on this page.
+            {totalCount} field{totalCount === 1 ? "" : "s"} detected · {autoCount}{" "}
+            auto-filled · {needCount} need your input
           </p>
         </div>
         <div className="jbz-header-actions">
+          {onRescan && (
+            <button
+              type="button"
+              className="jbz-close"
+              onClick={onRescan}
+              aria-label="Re-scan page"
+              title="Re-scan the page"
+            >
+              ↻
+            </button>
+          )}
           <button
             type="button"
             className="jbz-close"
@@ -402,6 +459,13 @@ export function Panel({ fields, onClose }: PanelProps) {
 
       {!collapsed && (
         <div className="jbz-panel-body">
+          {blockedIframes > 0 && (
+            <p className="jbz-blocked-note" role="status">
+              This page embeds {blockedIframes} form
+              {blockedIframes === 1 ? "" : "s"} inside iframes we can't read
+              (cross-origin). Fill those manually — they aren't listed below.
+            </p>
+          )}
           <ul className="jbz-field-list">
             {rows.map((row, i) => (
               <li className="jbz-field-row" key={i}>
@@ -562,6 +626,15 @@ export function Panel({ fields, onClose }: PanelProps) {
           )}
 
           <footer className="jbz-footer">
+            {lastFillSnapshot && (
+              <button
+                type="button"
+                className="jbz-btn jbz-undo-btn"
+                onClick={handleUndo}
+              >
+                Undo fill
+              </button>
+            )}
             <button
               type="button"
               className="jbz-btn jbz-btn-primary jbz-fill-btn"

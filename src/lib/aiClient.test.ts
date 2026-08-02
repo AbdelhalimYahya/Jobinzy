@@ -57,6 +57,48 @@ describe("generate (3.5)", () => {
   });
 });
 
+describe("generate retry (10.3)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("retries a transient network failure and succeeds", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(
+        jsonResponse({ choices: [{ message: { content: "Recovered" } }] })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(generate("hi", settings)).resolves.toBe("Recovered");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries once on a 5xx, then surfaces the real error", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { message: "still down" } }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(generate("hi", settings)).rejects.toThrow(/503/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does NOT retry a permanent 401 (bad key)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(generate("hi", settings)).rejects.toThrow(/401/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("testConnection (3.4)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -86,6 +128,19 @@ describe("testConnection (3.4)", () => {
     const result = await testConnection(settings);
     expect(result.ok).toBe(false);
     expect(result.message).toMatch(/couldn't reach/i);
+  });
+
+  it("retries a transient network failure and then succeeds (10.3)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(
+        jsonResponse({ choices: [{ message: { content: "OK" } }] })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await testConnection(settings);
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -119,6 +174,12 @@ describe("withRetry (10.3 forward)", () => {
       .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce("ok");
     await expect(withRetry(fn, 1, 0)).resolves.toBe("ok");
+  });
+
+  it("skips retry when the predicate rejects the error (non-retryable)", async () => {
+    const fn = vi.fn().mockRejectedValue(new Error("boom"));
+    await expect(withRetry(fn, 3, 0, () => false)).rejects.toThrow("boom");
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });
 

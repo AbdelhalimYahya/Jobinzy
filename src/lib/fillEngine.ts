@@ -207,6 +207,38 @@ export function readElementValue(el: HTMLElement): string {
   return typeof input.value === "string" ? input.value : "";
 }
 
+/** One element + the value it held at snapshot time (10.6 undo). */
+export interface ValueSnapshot {
+  element: HTMLElement;
+  value: string;
+}
+
+/**
+ * 10.6 — captures the current values of a set of elements, so a later fill
+ * can be undone. Used by the panel's "Undo fill" action.
+ */
+export function captureValues(elements: HTMLElement[]): ValueSnapshot[] {
+  return elements.map((el) => ({ element: el, value: readElementValue(el) }));
+}
+
+/**
+ * 10.6 — restores a snapshot of values back into the page, dispatching the
+ * same native events a normal fill would so framework-bound forms update.
+ */
+export function restoreValues(snapshot: ValueSnapshot[]): void {
+  for (const { element, value } of snapshot) {
+    if (element instanceof HTMLSelectElement) {
+      element.value = value;
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      continue;
+    }
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      setNativeValue(element, value);
+      dispatchInputEvents(element);
+    }
+  }
+}
+
 /**
  * 8.4/9.5/9.6 — fills a batch of fields, respecting each entry's skip flag,
  * then runs the post-fill validation pass (re-read every filled element and

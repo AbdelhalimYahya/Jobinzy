@@ -313,6 +313,49 @@ describe("Panel (Phase 8)", () => {
     expect(screen.getByText("Done at last")).toBeInTheDocument();
   });
 
+  it("10.2: shows a blocked-iframe notice when iframes can't be read", async () => {
+    const fields = buildFormFields();
+    render(
+      <Panel fields={fields} onClose={() => {}} blockedIframes={2} />
+    );
+    expect(await screen.findByText(/2 forms inside iframes we can't read/)).toBeInTheDocument();
+  });
+
+  it("10.4: summary line reflects live auto-filled / needs-input counts", async () => {
+    const fields = buildFormFields();
+    render(<Panel fields={fields} onClose={() => {}} />);
+    await screen.findByText("AI-generated");
+    // name (profile) + why (AI) are both resolved → 2 auto-filled, 0 need input.
+    expect(screen.getByText(/3 fields detected · 2 auto-filled · 0 need your input/)).toBeInTheDocument();
+  });
+
+  it("10.5: Re-scan calls onRescan", async () => {
+    const onRescan = vi.fn();
+    const fields = buildFormFields();
+    render(<Panel fields={fields} onClose={() => {}} onRescan={onRescan} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Re-scan page" }));
+    expect(onRescan).toHaveBeenCalledTimes(1);
+  });
+
+  it("10.6: Undo fill restores pre-fill values", async () => {
+    const fields = buildFormFields();
+    render(<Panel fields={fields} onClose={() => {}} />);
+    await screen.findByText("AI-generated");
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Fill form" }));
+    expect((document.getElementById("name") as HTMLInputElement).value).toBe("Sara Ahmed");
+    expect((document.getElementById("why") as HTMLTextAreaElement).value).toBe(
+      "Because my skills fit the role."
+    );
+
+    // Undo restores the empty pre-fill state and hides the undo control.
+    await user.click(screen.getByRole("button", { name: "Undo fill" }));
+    expect((document.getElementById("name") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("why") as HTMLTextAreaElement).value).toBe("");
+    expect(screen.queryByRole("button", { name: "Undo fill" })).not.toBeInTheDocument();
+  });
+
   it("6.7: a failing field shows an error + Retry without breaking the rest", async () => {
     resolveAnswerMock.mockRejectedValueOnce(new Error("AI request failed (401): bad key"));
     const fields = buildFormFields();

@@ -8,10 +8,9 @@
  *      creating a second instance. Close removes it entirely.
  * 4.6: RTL-safe — the panel uses fixed positioning and avoids LTR-only
  *      assumptions (see panel.css).
- *
- * Note on structure: the panel (Phase 8) and detector (Phase 5) are seeded
- * here as minimal versions so Phase 4 acceptance criteria are testable;
- * they are fully implemented in their own phases.
+ * 10.1: detection waits for the DOM to settle first (async-rendered forms).
+ * 10.2: cross-origin iframes are reported to the panel as unreadable.
+ * 10.5: the panel's Re-scan re-runs detection from here.
  *
  * CSS note: content-script chunks get their CSS extracted to an unreferenced
  * asset by Vite, so panel styles are imported `?inline` and injected into
@@ -20,6 +19,8 @@
  */
 import { createRoot, type Root } from "react-dom/client";
 import { detectFields } from "../lib/detector";
+import { waitForDomSettle } from "../lib/domSettle";
+import { findBlockedIframes } from "../lib/detector/scan";
 import type { DetectedField } from "../lib/types";
 import { Panel } from "./panel/Panel";
 import panelCss from "./panel/panel.css?inline";
@@ -72,8 +73,11 @@ export function removeHost(): void {
   if (host) host.remove();
 }
 
-/** Runs detection and mounts the review panel (4.3). */
+/** Runs detection and mounts the review panel (4.3, 10.1, 10.2). */
 export async function runDetection(): Promise<DetectedField[]> {
+  // 10.1 — give asynchronously-rendered forms a moment to finish appearing
+  // before scanning (best-effort gate; never rejects or delays forever).
+  await waitForDomSettle(document);
   const fields = await detectFields(document);
   mountPanel(fields);
   return fields;
@@ -84,6 +88,10 @@ function mountPanel(fields: DetectedField[]): void {
   const shadowRoot = host.shadowRoot;
   if (!shadowRoot) return;
 
+  // 10.2 — count iframes we can't read (cross-origin) so the panel can tell
+  // the user they exist instead of silently omitting them.
+  const blockedIframes = findBlockedIframes(document).length;
+
   // Mount the panel into the same shadow root as the trigger button.
   let container = shadowRoot.getElementById("jbz-panel-root");
   if (!container) {
@@ -93,5 +101,12 @@ function mountPanel(fields: DetectedField[]): void {
   }
   if (panelRoot) panelRoot.unmount();
   panelRoot = createRoot(container);
-  panelRoot.render(<Panel fields={fields} onClose={removeHost} />);
+  panelRoot.render(
+    <Panel
+      fields={fields}
+      onClose={removeHost}
+      onRescan={() => void runDetection()}
+      blockedIframes={blockedIframes}
+    />
+  );
 }

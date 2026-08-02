@@ -12,6 +12,7 @@ vi.mock("./classifyAi", () => ({
 
 // detectFields imports getAISettings from storage — it runs against the mock.
 import { detectFields } from "./index";
+import { collectCandidates, findBlockedIframes } from "./scan";
 
 const settings: AISettings = {
   provider: "nvidia-free",
@@ -113,5 +114,43 @@ describe("detectFields (5.6-5.9)", () => {
     const fields = await detectFields(document, settings);
     // the open-ended field degrades gracefully instead of aborting
     expect(fields.some((f) => f.kind === "open-ended")).toBe(true);
+  });
+
+  it("10.2: recurses into same-origin iframes when scanning", async () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument;
+    if (doc) {
+      doc.body.innerHTML = `
+        <label for="fname">First Name</label>
+        <input id="fname" name="fname" />
+      `;
+    }
+    const candidates = collectCandidates(document);
+    expect(candidates.some((el) => el.id === "fname")).toBe(true);
+    // ... and detectFields classifies it (rule-based, no AI call).
+    const fields = await detectFields(document, settings);
+    expect(fields.some((f) => f.elementRef.id === "fname" && f.kind === "profile")).toBe(
+      true
+    );
+    iframe.remove();
+  });
+
+  it("10.2: cross-origin iframes are reported, not silently skipped", async () => {
+    const iframe = document.createElement("iframe");
+    // Simulate a cross-origin frame: contentDocument access throws.
+    Object.defineProperty(iframe, "contentDocument", {
+      get() {
+        throw new DOMException("blocked", "SecurityError");
+      },
+    });
+    document.body.appendChild(iframe);
+
+    // Scanning must not throw when it hits the blocked frame…
+    expect(() => collectCandidates(document)).not.toThrow();
+    // …and findBlockedIframes must report it so the panel can tell the user.
+    const blocked = findBlockedIframes(document);
+    expect(blocked).toContain(iframe);
+    iframe.remove();
   });
 });

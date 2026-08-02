@@ -1,0 +1,121 @@
+/* Jobinzy review panel (inside the shadow root — isolated from host page).
+   RTL-safe: uses fixed positioning and logical properties (inset-inline-*),
+   no left/right-only assumptions (plan 4.6). */
+
+.jbz-panel {
+  position: fixed;
+  top: 16px;
+  inset-inline-end: 16px;
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: #1f2430;
+  border: 1px solid #e3e6ee;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(16, 24, 40, 0.18);
+  z-index: 2147483646;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.jbz-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef0f6;
+  background: #fafbff;
+}
+
+.jbz-panel-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.jbz-close {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.jbz-close:hover {
+  background: #eef0f6;
+  color: #1f2430;
+}
+
+.jbz-close:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 1px;
+}
+
+.jbz-panel-sub {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #6b7280;
+  border-bottom: 1px solid #eef0f6;
+}
+
+.jbz-field-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.jbz-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 8px;
+  border-radius: 8px;
+}
+
+.jbz-field-row:hover {
+  background: #f6f7fb;
+}
+
+.jbz-field-q {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.jbz-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+
+.jbz-badge-profile {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.jbz-badge-open-ended {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.jbz-badge-file-or-link {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.jbz-badge-unknown {
+  background: #f3f4f6;
+  color: #6b7280;
+}

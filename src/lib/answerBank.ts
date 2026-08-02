@@ -4,10 +4,9 @@
  * `normalizeQuestion` is the canonical question normalizer for the answer
  * bank. Per plan 7.2 it is used BOTH by storage lookups (upsert/delete
  * keying) and by `findBankMatch` (Phase 6.2), so the two can never disagree
- * about what counts as "the same question". It is defined here early
- * (storage.ts keys the bank with it) and expanded with `findBankMatch`
- * in Phase 7.
+ * about what counts as "the same question".
  */
+import type { AnswerBankEntry } from "./types";
 
 /**
  * Normalizes question text for comparison/keying:
@@ -26,4 +25,16 @@ export function normalizeQuestion(text: string): string {
     .replace(/\s+/g, " ")
     .replace(/[?؟]+$/, "")
     .trim();
+}
+
+/**
+ * Phase 6.2 / 7.2 — finds a bank entry whose normalized question text
+ * matches, or null if none does.
+ */
+export function findBankMatch(
+  questionText: string,
+  bank: AnswerBankEntry[]
+): AnswerBankEntry | null {
+  const key = normalizeQuestion(questionText);
+  return bank.find((e) => normalizeQuestion(e.questionText) === key) ?? null;
 }

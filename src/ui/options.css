@@ -263,3 +263,44 @@ body {
   flex-direction: column;
   gap: 10px;
 }
+
+/* AI settings toggle + masked key (Phase 3) */
+.jf-toggle {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.jf-toggle-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--jf-border);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.jf-toggle-option.is-selected {
+  border-color: var(--jf-primary);
+  background: #eef2ff;
+  color: var(--jf-primary-dark);
+}
+
+.jf-masked-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jf-masked {
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  background: #f1f3f9;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--jf-muted);
+}

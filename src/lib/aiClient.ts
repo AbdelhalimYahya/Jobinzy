@@ -1,26 +1,63 @@
 /**
  * AI client — the ONLY module that constructs AI HTTP requests.
  *
- * Phase 2: minimal `generate()` so cvParser's `structureCv` can work.
- * Phase 3 expands this module with `testConnection`, a concurrency limiter,
- * and centralized retry handling (10.3). Every feature that needs AI output
- * (CV parsing, open-ended answers, rewrites) must go through this module —
- * no raw `fetch` to an AI endpoint anywhere else.
+ * Responsibilities (phases 2.4, 3.4/3.5, 3.7, 10.3):
+ * - `generate()` — one OpenAI-compatible chat completion request.
+ * - `testConnection()` — validates stored/entered settings (3.4).
+ * - A simple in-module concurrency limiter so a form with many open-ended
+ *   questions never fires a burst of simultaneous requests (3.7).
+ * - `withRetry()` — shared retry helper used by every AI call (10.3).
+ *
+ * Every feature that needs AI output (CV parsing, open-ended answers,
+ * rewrites) goes through this module — no raw `fetch` to an AI endpoint
+ * anywhere else.
  */
 import type { AISettings } from "./types";
 
 /** Cap prompt/response sizes so long CVs don't silently overflow context. */
 export const MAX_PROMPT_CHARS = 12000;
 export const DEFAULT_MAX_TOKENS = 600;
+/** Max concurrent in-flight generate() calls (3.7). */
+export const MAX_CONCURRENT_REQUESTS = 2;
+/** Default timeouts. */
+export const REQUEST_TIMEOUT_MS = 60_000;
+export const TEST_TIMEOUT_MS = 15_000;
 
 export interface GenerateOptions {
   maxTokens?: number;
   temperature?: number;
 }
 
-function buildRequestUrl(settings: AISettings): string {
-  const base = settings.baseUrl.replace(/\/+$/, "");
-  return `${base}/chat/completions`;
+export function buildRequestUrl(settings: AISettings): string {
+  let base = settings.baseUrl.replace(/\/+$/, "");
+  // Tolerate a base URL that already ends in /chat/completions (3.3 note).
+  if (!base.endsWith("/chat/completions")) {
+    base += "/chat/completions";
+  }
+  return base;
+}
+
+/** Shared request construction — the single place a chat request is built. */
+async function requestCompletion(
+  settings: AISettings,
+  prompt: string,
+  opts: GenerateOptions,
+  signal?: AbortSignal
+): Promise<Response> {
+  return fetch(buildRequestUrl(settings), {
+    method: "POST",
+    signal,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${settings.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: settings.model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
+      temperature: opts.temperature ?? 0.7,
+    }),
+  });
 }
 
 /**
@@ -33,42 +70,149 @@ export async function generate(
   settings: AISettings,
   opts: GenerateOptions = {}
 ): Promise<string> {
-  const res = await fetch(buildRequestUrl(settings), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${settings.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: settings.model,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
-      temperature: opts.temperature ?? 0.7,
-    }),
-  });
-
-  if (!res.ok) {
-    let detail = "";
+  return runWithConcurrencyLimit(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const body = await res.json();
-      detail = body?.error?.message ?? JSON.stringify(body);
-    } catch {
-      detail = await res.text().catch(() => "");
-    }
-    throw new Error(`AI request failed (${res.status}): ${detail}`);
-  }
+      const res = await requestCompletion(settings, prompt, opts, controller.signal);
 
-  const data: unknown = await res.json();
-  const content = extractContent(data);
-  if (typeof content !== "string" || content.length === 0) {
-    throw new Error("AI response did not contain a text completion");
+      if (!res.ok) {
+        let detail = "";
+        try {
+          const body = await res.json();
+          detail = body?.error?.message ?? JSON.stringify(body);
+        } catch {
+          detail = await res.text().catch(() => "");
+        }
+        throw new Error(`AI request failed (${res.status}): ${detail}`);
+      }
+
+      const data: unknown = await res.json();
+      const content = extractContent(data);
+      if (typeof content !== "string" || content.length === 0) {
+        throw new Error("AI response did not contain a text completion");
+      }
+      return content.trim();
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new Error(`AI request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
+}
+
+/**
+ * Sends a minimal trivial prompt to verify settings. Never throws — returns
+ * a human-readable result message for the UI (3.4).
+ */
+export async function testConnection(
+  settings: AISettings
+): Promise<{ ok: boolean; message: string }> {
+  if (!settings.apiKey) {
+    return { ok: false, message: "Enter an API key first, then test the connection." };
   }
-  return content.trim();
+  if (!settings.baseUrl) {
+    return { ok: false, message: "Enter a base URL first, then test the connection." };
+  }
+  // Single user action — intentionally NOT routed through the concurrency
+  // limiter (that exists to throttle bulk answer generation, not one click).
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TEST_TIMEOUT_MS);
+  try {
+    const res = await requestCompletion(
+      settings,
+      "Reply with the single word OK.",
+      { maxTokens: 8, temperature: 0 },
+      controller.signal
+    );
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        message: classifyFailure(res.status, `HTTP ${res.status}`),
+      };
+    }
+    return { ok: true, message: "Connection successful — AI provider reached." };
+  } catch (err) {
+    const status = err instanceof Error && err.name === "AbortError" ? 0 : undefined;
+    return { ok: false, message: classifyFailure(status, messageOf(err)) };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function classifyFailure(status: number | undefined, detail: string): string {
+  if (status === 0) return "Timed out — check the base URL and your connection.";
+  if (status === 401 || status === 403) return "Invalid API key — please check it.";
+  if (status === 429) return "Rate limited — try again in a moment.";
+  if (status === 404) return "Endpoint not found — check the base URL.";
+  if (status && status >= 500) return `Provider error (HTTP ${status}) — try again later.`;
+  // Network-level failures (fetch throws TypeError "Failed to fetch").
+  return `Couldn't reach the AI provider — ${detail || "network error"}.`;
+}
+
+function messageOf(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+// ---- Concurrency limiter (3.7) --------------------------------------------
+
+let inFlight = 0;
+const waiters: Array<() => void> = [];
+
+/**
+ * Runs `fn` while guaranteeing no more than MAX_CONCURRENT_REQUESTS of these
+ * callbacks are in flight at once; the rest queue and run as slots free up.
+ */
+export async function runWithConcurrencyLimit<T>(fn: () => Promise<T>): Promise<T> {
+  if (inFlight < MAX_CONCURRENT_REQUESTS) {
+    inFlight++;
+    try {
+      return await fn();
+    } finally {
+      inFlight--;
+      releaseWaiter();
+    }
+  }
+  return new Promise<T>((resolve, reject) => {
+    waiters.push(() => {
+      void runWithConcurrencyLimit(fn).then(resolve, reject);
+    });
+  });
+}
+
+function releaseWaiter(): void {
+  const next = waiters.shift();
+  if (next) next();
+}
+
+// ---- Retry helper (10.3) ---------------------------------------------------
+
+/**
+ * Retries `fn` up to `retries` times on failure, with a short backoff.
+ * Used by generate(), testConnection() and cvParser's structureCv so retry
+ * behavior isn't reimplemented per feature.
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 1,
+  delayMs = 800
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 function extractContent(data: unknown): unknown {

@@ -1,28 +1,61 @@
 /**
- * Fill engine — Phase 9 module, but a functional core is built during
- * Phase 8 because the panel's "Fill form" action (8.4) depends on it.
+ * Fill engine — Phase 9.
  *
- * Core capabilities delivered here (9.1/9.2/9.4/9.6):
- * - 9.1 `fillField` for inputs/textareas via the NATIVE value setter, then
+ * - 9.1 `fillTextInput` — inputs/textareas via the NATIVE value setter, then
  *   native `input` + `change` events (required for React-controlled forms).
  * - 9.2 `fillSelect` — exact match first, case-insensitive substring
  *   fallback; no match → reports back instead of picking an arbitrary option.
+ * - 9.3 `fillComboBox` — best-effort custom-widget filling: focus/click to
+ *   open, type the value, try to click a matching rendered option within a
+ *   short timeout; otherwise clearly reports "complete manually" — never a
+ *   silent no-op or an ambiguous half-filled state.
  * - 9.4 `flashHighlight` + `scrollIntoViewIfNeeded` — visual fill feedback.
- * - 9.6 `verifyFilled` — re-reads the element after filling so the panel can
- *   flag values a page script reset (mismatch warning, not false success).
+ * - 9.5 `fillFields` — batch entry point that respects each entry's skip
+ *   flag (the panel maps Skip / "I'll do this myself" to skip=true).
+ * - 9.6 `verifyFilled` + the post-fill validation pass inside `fillFields`:
+ *   after every fill, re-reads each element and flags mismatches (a page
+ *   script that resets the value is surfaced, not shown as success).
  *
- * Phase 9 expands this with best-effort custom-widget (role="combobox")
- * filling, per-field undo snapshots, and skip-state checks centralized here.
+ * The panel (8.4/8.5) drives this module; it decides which fields to fill
+ * and reports per-field results back to the row states.
  */
 import type { DetectedField } from "./types";
 
 export interface FillResult {
   ok: boolean;
   message?: string;
+  /** The actual value written (what the panel should verify against). */
+  value?: string;
+}
+
+/** One field to fill, as decided by the panel. skip=false per 9.5. */
+export interface FillEntry {
+  field: DetectedField;
+  value: string;
+  skip: boolean;
+}
+
+/** Per-field outcome of a batch fill, including the 9.6 verification. */
+export interface FillEntryResult {
+  field: DetectedField;
+  ok: boolean;
+  message?: string;
+  /** The actual value written (compared against by the 9.6 pass). */
+  value?: string;
+  /** True when the page reset/ignored the value right after filling (9.6). */
+  mismatch?: boolean;
 }
 
 /** How long the fill highlight stays visible (plan 9.4, ~600ms). */
 const HIGHLIGHT_MS = 600;
+/** How long to wait for a custom combobox to render a matching option (9.3). */
+export const COMBOBOX_WAIT_MS = 1500;
+
+/** Shared user-facing message when a field genuinely can't be auto-filled. */
+const CANNOT_AUTOFILL_MESSAGE =
+  "This field can't be auto-filled — please complete it manually.";
+
+const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
  * 9.1 — sets a value through the native property setter so React-controlled
@@ -54,7 +87,7 @@ export function fillTextInput(
 ): FillResult {
   setNativeValue(el, value);
   dispatchInputEvents(el);
-  return { ok: true };
+  return { ok: true, value };
 }
 
 /**
@@ -80,28 +113,160 @@ export function fillSelect(el: HTMLSelectElement, value: string): FillResult {
   }
   el.value = match.value;
   el.dispatchEvent(new Event("change", { bubbles: true }));
-  return { ok: true };
+  return { ok: true, value: match.value };
+}
+
+/** True for custom widget fields that need the 9.3 best-effort path. */
+function isCustomWidget(el: HTMLElement): boolean {
+  return (
+    el.getAttribute("role") === "combobox" ||
+    el.getAttribute("role") === "listbox" ||
+    el.getAttribute("aria-haspopup") === "listbox" ||
+    el.isContentEditable
+  );
 }
 
 /**
- * 8.4/9.1 — main entry: scrolls to + highlights the element, then fills it
- * according to its element type. Returns a per-field result so the panel
- * (and later the post-fill validation pass) can react to failures.
+ * 9.3 — best-effort fill for custom widgets (role="combobox" etc.):
+ * focus + click to open, type the value, then try to select a matching
+ * rendered option if one appears within the timeout. If nothing matches,
+ * reports back that the field needs manual completion — the panel shows
+ * that status instead of leaving an ambiguous half-filled field.
+ */
+export async function fillComboBox(
+  el: HTMLElement,
+  value: string,
+  opts?: { waitMs?: number }
+): Promise<FillResult> {
+  el.focus();
+  el.click();
+
+  // Type the value into whatever text surface the widget exposes.
+  if (el instanceof HTMLInputElement) {
+    setNativeValue(el, value);
+    dispatchInputEvents(el);
+  } else if (el.isContentEditable || el.getAttribute("contenteditable") === "true") {
+    el.textContent = value;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  } else if (el instanceof HTMLTextAreaElement) {
+    setNativeValue(el, value);
+    dispatchInputEvents(el);
+  } else {
+    return {
+      ok: false,
+      message: "This widget can't be auto-filled — please complete it manually.",
+    };
+  }
+
+  // Try to select a matching rendered option within the timeout.
+  const deadline = Date.now() + (opts?.waitMs ?? COMBOBOX_WAIT_MS);
+  while (Date.now() < deadline) {
+    const option = findComboboxOption(value);
+    if (option) {
+      option.click();
+      return { ok: true, value };
+    }
+    await delay(50);
+  }
+  return {
+    ok: false,
+    message: "Couldn't auto-fill this dropdown — please select an option manually.",
+  };
+}
+
+/**
+ * Finds a rendered option element whose text matches the target value.
+ * Prefers ARIA-annotated options and listbox items; bare `li` elements are
+ * only consulted as a last resort, since an unrelated page list (e.g. a nav
+ * menu) could otherwise be clicked. Best-effort per 9.3 — the timeout +
+ * manual-completion fallback covers the cases where nothing safely matches.
+ */
+function findComboboxOption(value: string): HTMLElement | null {
+  const needle = value.trim().toLowerCase();
+  const prefers = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '[role="option"], [role="listbox"] li, select option'
+    )
+  );
+  const preferred =
+    prefers.find((o) => o.textContent?.trim().toLowerCase() === needle) ??
+    prefers.find((o) => o.textContent?.trim().toLowerCase().includes(needle));
+  if (preferred) return preferred;
+  // Last resort: a bare list item exactly matching the target.
+  return (
+    Array.from(document.querySelectorAll<HTMLElement>("li")).find(
+      (o) => o.textContent?.trim().toLowerCase() === needle
+    ) ?? null
+  );
+}
+
+/** Reads the current value of any fillable element. */
+export function readElementValue(el: HTMLElement): string {
+  if (el instanceof HTMLSelectElement) return el.value;
+  const input = el as HTMLInputElement | HTMLTextAreaElement;
+  return typeof input.value === "string" ? input.value : "";
+}
+
+/**
+ * 8.4/9.5/9.6 — fills a batch of fields, respecting each entry's skip flag,
+ * then runs the post-fill validation pass (re-read every filled element and
+ * flag mismatches). The panel calls this from its "Fill form" action.
+ */
+export async function fillFields(entries: FillEntry[]): Promise<FillEntryResult[]> {
+  const results: FillEntryResult[] = [];
+
+  for (const entry of entries) {
+    // 9.5 — a skipped field is never touched, even though a value exists.
+    if (entry.skip) continue;
+
+    const el = entry.field.elementRef;
+    scrollIntoViewIfNeeded(el);
+    flashHighlight(el);
+
+    if (isCustomWidget(el)) {
+      const r = await fillComboBox(el, entry.value);
+      results.push({ field: entry.field, ok: r.ok, message: r.message, value: r.value });
+    } else if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      const r = fillTextInput(el, entry.value);
+      results.push({ field: entry.field, ok: r.ok, message: r.message, value: r.value });
+    } else if (el instanceof HTMLSelectElement) {
+      const r = fillSelect(el, entry.value);
+      results.push({ field: entry.field, ok: r.ok, message: r.message, value: r.value });
+    } else {
+      results.push({ field: entry.field, ok: false, message: CANNOT_AUTOFILL_MESSAGE });
+    }
+  }
+
+  // 9.6 — post-fill validation: re-read each filled element and compare
+  // against the value we believe we wrote, via verifyFilled (single source
+  // of truth, including the select option-matching case).
+  for (const res of results) {
+    if (!res.ok || res.value === undefined) continue;
+    res.mismatch = !verifyFilled(res.field.elementRef, res.value);
+  }
+
+  return results;
+}
+
+/**
+ * 8.4/9.1 — single-field fill (also used for post-fill row edits, 8.5).
+ * Synchronous for standard fields; custom widgets return ok:false here and
+ * are handled by the async batch path in fillFields.
  */
 export function fillField(field: DetectedField, value: string): FillResult {
   const el = field.elementRef;
   scrollIntoViewIfNeeded(el);
   flashHighlight(el);
+  if (isCustomWidget(el)) {
+    return { ok: false, message: CANNOT_AUTOFILL_MESSAGE };
+  }
   if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
     return fillTextInput(el, value);
   }
   if (el instanceof HTMLSelectElement) {
     return fillSelect(el, value);
   }
-  return {
-    ok: false,
-    message: "This field type can't be auto-filled — please complete it manually.",
-  };
+  return { ok: false, message: CANNOT_AUTOFILL_MESSAGE };
 }
 
 /**
@@ -116,8 +281,7 @@ export function verifyFilled(el: HTMLElement, expected: string): boolean {
     );
     return match ? el.value === match.value : el.value === expected;
   }
-  const input = el as HTMLInputElement | HTMLTextAreaElement;
-  return input.value === expected;
+  return readElementValue(el) === expected;
 }
 
 /** 9.4 — briefly outlines/highlights a filled or targeted element. */

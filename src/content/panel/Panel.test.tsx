@@ -197,6 +197,23 @@ describe("Panel (Phase 8)", () => {
     expect(screen.queryByText(/didn't keep this value/)).not.toBeInTheDocument();
   });
 
+  it("9.5: a Skipped row's DOM value stays unchanged after Fill form", async () => {
+    const fields = buildFormFields();
+    render(<Panel fields={fields} onClose={() => {}} />);
+    await screen.findByText("AI-generated");
+    const user = userEvent.setup();
+
+    // Skip the name row, then fill — only the why row is written.
+    const rows = screen.getAllByRole("listitem");
+    await user.click(within(rows[0]).getByRole("button", { name: "Skip" }));
+    await user.click(screen.getByRole("button", { name: "Fill form" }));
+
+    expect((document.getElementById("name") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("why") as HTMLTextAreaElement).value).toBe(
+      "Because my skills fit the role."
+    );
+  });
+
   it("8.5: editing after fill re-fills just that field; Close calls onClose", async () => {
     const onClose = vi.fn();
     const fields = buildFormFields();

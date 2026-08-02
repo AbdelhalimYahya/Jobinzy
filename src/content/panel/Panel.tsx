@@ -40,9 +40,10 @@ import { resolveProfileField } from "../../lib/detector/resolveAnswers";
 import { regenerateWithInstruction, resolveAnswer } from "../../lib/answerGen";
 import {
   fillField,
+  fillFields,
   flashHighlight,
   scrollIntoViewIfNeeded,
-  verifyFilled,
+  type FillEntry,
 } from "../../lib/fillEngine";
 
 type SkipMode = "accept" | "skip" | "manual";
@@ -238,7 +239,12 @@ export function Panel({ fields, onClose }: PanelProps) {
     const value = rows[index].draft;
     updateRow(index, { answer: value, editMode: false, draft: "", status: "needs-input" });
     if (hasFilled && value.trim() && rows[index].skipMode === "accept") {
-      fillField(rows[index].field, value);
+      const result = fillField(rows[index].field, value);
+      // Surface a failed re-fill (e.g. an unsupported widget) to the user
+      // instead of silently no-oping (8.5).
+      if (!result.ok) {
+        updateRow(index, { status: "error", error: result.message });
+      }
     }
   }
 
@@ -273,26 +279,42 @@ export function Panel({ fields, onClose }: PanelProps) {
 
   // ---- fill actions ---------------------------------------------------------
 
-  /** 8.4 — fills every accepted row with a resolved answer, then verifies (9.6). */
-  function handleFill(): void {
-    let filledAny = false;
-    rows.forEach((row, i) => {
-      if (row.skipMode !== "accept" || row.loading || !row.answer.trim()) return;
-      filledAny = true;
-      const result = fillField(row.field, row.answer);
-      if (!result.ok) {
-        updateRow(i, { status: "error", error: result.message });
+  /**
+   * 8.4/9.5/9.6 — fills every accepted row via the batch engine. Skip state
+   * and post-fill verification are centralized in fillFields: the entry's
+   * skip flag (9.5) ensures skipped rows are never touched, and values the
+   * page resets are flagged as a mismatch (9.6) instead of shown as success.
+   */
+  async function handleFill(): Promise<void> {
+    const entries: FillEntry[] = [];
+    rows.forEach((row) => {
+      if (row.loading || !row.answer.trim()) return;
+      entries.push({
+        field: row.field,
+        value: row.answer,
+        // 9.5 — the engine skips; skipMode is the single source of truth.
+        skip: row.skipMode !== "accept",
+      });
+    });
+    if (entries.length === 0) return;
+    setHasFilled(true);
+
+    const results = await fillFields(entries);
+    results.forEach((res) => {
+      const i = rows.findIndex((r) => r.field.elementRef === res.field.elementRef);
+      if (i < 0) return;
+      if (!res.ok) {
+        updateRow(i, { status: "error", error: res.message });
         return;
       }
-      const stuck = !verifyFilled(row.field.elementRef, row.answer);
+      const stuck = !!res.mismatch;
       updateRow(i, {
-        status: stuck ? "mismatch" : row.status,
+        status: stuck ? "mismatch" : rows[i].status,
         error: stuck
           ? "The page didn't keep this value — please check it manually."
           : undefined,
       });
     });
-    if (filledAny) setHasFilled(true);
   }
 
   // ---- drag (8.6) ------------------------------------------------------------

@@ -1,0 +1,15 @@
+/* Jobinzy options page styles (placeholder; expanded in later phases). */
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #f6f7fb;
+  color: #1f2430;
+}
